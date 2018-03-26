@@ -41,14 +41,15 @@ async def get_history_data(app, request):
             DATA_CONNECTION, loop=app.loop
         )
 
-        for target in targets:
-            req = {
-                "target": target,
-                "range": request["range"],
-                "intervalMs": request["intervalMs"],
-                "maxDataPoints": request["maxDataPoints"]
-            }
-            results.append(await get_single_history_data(connection, req))
+        async with connection:
+            for target in targets:
+                req = {
+                    "target": target,
+                    "range": request["range"],
+                    "intervalMs": request["intervalMs"],
+                    "maxDataPoints": request["maxDataPoints"]
+                }
+                results.append(await get_single_history_data(connection, req))
 
         await connection.close()
     except asyncio.CancelledError:
@@ -59,36 +60,35 @@ async def get_history_data(app, request):
 
 async def get_single_history_data(connection, request):
     try:
-        async with connection:
-            # Creating channel
-            channel = await connection.channel()
+        # Creating channel
+        channel = await connection.channel()
 
-            # Declaring queue
-            queue = await channel.declare_queue(auto_delete=True)
+        # Declaring queue
+        queue = await channel.declare_queue(auto_delete=True)
 
-            exchange = await channel.declare_exchange('historyExchange', passive=True)
+        exchange = await channel.declare_exchange('historyExchange', passive=True)
 
-            # Send request
-            await exchange.publish(
-                aio_pika.Message(
-                    bytes(json.dumps(request), 'utf-8'),
-                    content_type='application/json',
-                    reply_to=queue.name
-                ),
-                request["target"]
-            )
+        # Send request
+        await exchange.publish(
+            aio_pika.Message(
+                bytes(json.dumps(request), 'utf-8'),
+                content_type='application/json',
+                reply_to=queue.name
+            ),
+            request["target"]
+        )
 
+        incoming_message = await queue.get(fail=False)
+        while not incoming_message:
             incoming_message = await queue.get(fail=False)
-            while not incoming_message:
-                incoming_message = await queue.get(fail=False)
 
-            # Confirm message
-            incoming_message.ack()
+        # Confirm message
+        incoming_message.ack()
 
-            await queue.delete()
-            await channel.close()
+        await queue.delete()
+        await channel.close()
 
-            return json.loads(incoming_message.body.decode('utf-8'))
+        return json.loads(incoming_message.body.decode('utf-8'))
     except aio_pika.exceptions.ChannelClosed:
         pass
     except asyncio.CancelledError:
