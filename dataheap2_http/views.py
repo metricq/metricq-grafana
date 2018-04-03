@@ -15,9 +15,9 @@ async def query(request):
 
 
 async def search(request):
-    search_query = await request.text()
+    search_query = (await request.json())["target"]
     print(search_query)
-    if search_query == "*":
+    if search_query == "":
         ml = METRIC_LIST
     else:
         search_query = search_query.replace("*", "")
