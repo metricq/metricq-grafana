@@ -68,15 +68,30 @@ async def get_history_data(app, request):
 
         async with connection:
             for target in targets:
+                target_split = target.split("/")
+                if len(target_split) > 1:
+                    target_metric = "/".join(target_split[:-1])
+                    target_type = target_split[-1]
+                else:
+                    target_metric = "/".join(target_split[:-1])
+                    target_type = "avg"
                 req = HistoryRequest()
                 req.start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
                 req.end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
                 req.interval_ns = request["intervalMs"] * 10 ** 6
-                rep = await get_single_history_data(connection, target, req)
+                rep = await get_single_history_data(connection, target_metric, req)
 
-                rep_dict = {"target": rep.metric, "datapoints": [] }
+                rep_dict = {"target": target, "datapoints": [] }
                 last_timed = 0
-                for timed, value in zip(rep.time_delta, rep.value_avg):
+
+                if target_type == "min":
+                    zipped_tv = zip(rep.time_delta, rep.value_min)
+                elif target_type == "max":
+                    zipped_tv = zip(rep.time_delta, rep.value_max)
+                else:
+                    zipped_tv = zip(rep.time_delta, rep.value_avg)
+
+                for timed, value in zipped_tv:
                     dp = rep_dict["datapoints"]
                     last_timed += timed
                     dp.append((value , (last_timed) / (10 ** 6) ))
@@ -158,7 +173,8 @@ async def get_metric_list(app):
         done, _ = await asyncio.wait([future], loop=app.loop)
         result = future.result()
         if "metric_list" in result:
-            return result["metric_list"]
+            lists = [["{}/{}".format(metric, type) for type in ["min", "max", "avg"]] for metric in result["metric_list"]]
+            return sorted([x for t in zip(*lists) for x in t])
         return []
     except aio_pika.exceptions.ChannelClosed:
         pass
