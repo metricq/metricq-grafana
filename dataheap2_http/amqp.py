@@ -63,7 +63,7 @@ async def get_history_data(app, request):
 
     try:
         connection = await aio_pika.connect(
-            DATA_CONNECTION, loop=app.loop
+            DATA_CONNECTION, loop=app.loop, ssl=app["management_url"].startswith("amqps"),
         )
 
         async with connection:
