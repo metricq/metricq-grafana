@@ -1,8 +1,8 @@
 """Module for view functions"""
 from aiohttp import web
 
-from .amqp import get_history_data
-from .constants import METRIC_LIST
+from .amqp import get_history_data, get_metric_list
+#from .constants import METRIC_LIST
 
 
 async def query(request):
@@ -16,15 +16,16 @@ async def query(request):
 
 async def search(request):
     search_query = (await request.json())["target"]
+    metric_list = await get_metric_list(request.app)
     print(search_query)
     if search_query == "":
-        ml = METRIC_LIST
+        ml = metric_list
     else:
         search_query = search_query.replace("*", "")
         ml = []
-        for x in METRIC_LIST:
-            if x["text"].startswith(search_query):
-                m = dict(x)
+        for x in metric_list:
+            if x.startswith(search_query):
+                m = {"text": x}
                 m["text"] = m["text"].lstrip(search_query)
                 ml.append(m)
         print(ml)
