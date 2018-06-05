@@ -13,7 +13,7 @@ async def listen_to_amqp_management(app):
     token = app['token']
     try:
         connection = await aio_pika.connect(
-            app['management_url'], loop=app.loop
+            app['management_url'], loop=app.loop, ssl=app["management_url"].startswith("amqps"),
         )
 
         async with connection:
