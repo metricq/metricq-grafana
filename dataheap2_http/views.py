@@ -25,8 +25,5 @@ async def search(request):
         ml = []
         for x in metric_list:
             if x.startswith(search_query):
-                m = {"text": x}
-                m["text"] = m["text"].lstrip(search_query)
-                ml.append(m)
-        print(ml)
+                ml.append(x)
     return web.json_response(ml)
