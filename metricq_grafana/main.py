@@ -9,19 +9,20 @@ from aiohttp import web
 import aiohttp_cors
 import aio_pika
 
-from .amqp import listen_to_amqp_management
+from metricq.history_client import HistoryClient
+
 from .routes import setup_routes
 
 click_completion.init()
 
 
 async def start_background_tasks(app):
-    app['rabbitmq_listener'] = app.loop.create_task(listen_to_amqp_management(app))
+    app['history_client'] = HistoryClient(app['token'], app["management_url"], event_loop=app.loop)
+    await app['history_client'].connect()
 
 
 async def cleanup_background_tasks(app):
-    app['rabbitmq_listener'].cancel()
-    await app['rabbitmq_listener']
+    pass
 
 
 def create_app(loop, token, management_url, management_exchange):
