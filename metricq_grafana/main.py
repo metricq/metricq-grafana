@@ -1,20 +1,28 @@
 """Main module for running http server"""
 import traceback
+import logging
 
 import click
 import click_completion
+import click_log
 
 import asyncio
 from aiohttp import web
 import aiohttp_cors
 import aio_pika
 
+from metricq import get_logger
 from metricq.history_client import HistoryClient
 
 from .routes import setup_routes
 
-click_completion.init()
+logger = get_logger()
 
+click_log.basic_config(logger)
+logger.setLevel('INFO')
+logger.handlers[0].formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)-8s] [%(name)-20s] %(message)s')
+
+click_completion.init()
 
 async def start_background_tasks(app):
     app['history_client'] = HistoryClient(app['token'], app["management_url"], event_loop=app.loop)
@@ -58,7 +66,7 @@ def panic(loop, context):
 @click.argument('management-url', default='amqp://localhost/')
 @click.option('--token', default='dh2_http')
 @click.option('--management-exchange', default='dh2.management')
-#@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger)
 def runserver_cmd(management_url, token, management_exchange):
     loop = asyncio.get_event_loop()
     loop.set_debug(True)

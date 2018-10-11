@@ -2,8 +2,14 @@ import asyncio
 import calendar
 import datetime
 import json
+import time
 import uuid
+
 import aio_pika
+
+from metricq import get_logger
+
+logger = get_logger(__name__)
 
 async def get_history_data(app, request):
     targets = [x["target"] for x in request["targets"]]
@@ -20,7 +26,13 @@ async def get_history_data(app, request):
         start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         interval_ns = request["intervalMs"] * 10 ** 6
+        perf_start_time = time.perf_counter()
         rep = await app['history_client'].history_data_request(target_metric, start_time, end_time, interval_ns)
+        perf_end_time = time.perf_counter()
+        time_delta = (perf_end_time - perf_start_time)
+        if 'last_perf_log' not in app or app['last_perf_log'] < datetime.datetime.now() - datetime.timedelta(seconds=10):
+            logger.info('current metricq data reponse time: {}', datetime.timedelta(seconds=time_delta))
+            app['last_perf_log'] = datetime.datetime.now()
 
         rep_dict = {"target": target, "datapoints": [] }
         last_timed = 0
