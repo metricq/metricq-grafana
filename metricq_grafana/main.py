@@ -20,6 +20,7 @@ logger = get_logger()
 
 click_log.basic_config(logger)
 logger.setLevel('INFO')
+#logger.handlers[0].addFilter(logging.Filter(name='metricq_grafana'))
 logger.handlers[0].formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)-8s] [%(name)-20s] %(message)s')
 
 click_completion.init()
@@ -38,6 +39,7 @@ def create_app(loop, token, management_url, management_exchange):
     app['token'] = token
     app['management_url'] = management_url
     app['management_exchange'] = management_exchange
+    app['last_perf_list'] = []
 
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)

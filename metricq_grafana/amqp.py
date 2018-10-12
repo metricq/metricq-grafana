@@ -2,6 +2,7 @@ import asyncio
 import calendar
 import datetime
 import json
+from statistics import mean
 import time
 import uuid
 
@@ -30,8 +31,13 @@ async def get_history_data(app, request):
         rep = await app['history_client'].history_data_request(target_metric, start_time, end_time, interval_ns)
         perf_end_time = time.perf_counter()
         time_delta = (perf_end_time - perf_start_time)
+        app['last_perf_list'].insert(0, time_delta)
         if 'last_perf_log' not in app or app['last_perf_log'] < datetime.datetime.now() - datetime.timedelta(seconds=10):
-            logger.info('current metricq data reponse time: {}', datetime.timedelta(seconds=time_delta))
+            app['last_perf_list'] = app['last_perf_list'][:100]
+            max_value = datetime.timedelta(seconds=max(app['last_perf_list']))
+            min_value = datetime.timedelta(seconds=min(app['last_perf_list']))
+            avg_value = datetime.timedelta(seconds=mean(app['last_perf_list']))
+            logger.info('Last 100 metricq data reponse times: min {}, max {}, avg {}', min_value, max_value, avg_value)
             app['last_perf_log'] = datetime.datetime.now()
 
         rep_dict = {"target": target, "datapoints": [] }
