@@ -65,8 +65,9 @@ async def get_history_data(app, request):
 
     return results
 
-async def get_metric_list(app):
-    result = await app["history_client"].history_metric_list()
+async def get_metric_list(app, search_query):
+    selector = "^(.+\\.)?{}.*$".format(re.escape(search_query))
+    result = await app["history_client"].history_metric_list(selector=selector)
     if result:
         lists = [["{}/{}".format(metric, type) for type in ["min", "max", "avg"]] for metric in result]
         return sorted([x for t in zip(*lists) for x in t])

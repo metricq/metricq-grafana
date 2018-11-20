@@ -19,14 +19,6 @@ async def query(request):
 
 async def search(request):
     search_query = (await request.json())["target"]
-    metric_list = await get_metric_list(request.app)
     logger.debug("Search query: {}", search_query)
-    if search_query == "":
-        ml = metric_list
-    else:
-        search_query = search_query.replace("*", "")
-        ml = []
-        for x in metric_list:
-            if x.startswith(search_query):
-                ml.append(x)
-    return web.json_response(ml)
+    metric_list = await get_metric_list(request.app, search_query)
+    return web.json_response(metric_list)
