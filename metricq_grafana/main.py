@@ -66,8 +66,8 @@ def panic(loop, context):
 
 @click.command()
 @click.argument('management-url', default='amqp://localhost/')
-@click.option('--token', default='dh2_http')
-@click.option('--management-exchange', default='dh2.management')
+@click.option('--token', default='metricq-grafana')
+@click.option('--management-exchange', default='metricq.management')
 @click_log.simple_verbosity_option(logger)
 def runserver_cmd(management_url, token, management_exchange):
     loop = asyncio.get_event_loop()
