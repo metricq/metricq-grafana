@@ -11,8 +11,7 @@ from aiohttp import web
 import aiohttp_cors
 import aio_pika
 
-from metricq import get_logger
-from metricq.history_client import HistoryClient
+from metricq import get_logger, HistoryClient
 
 from .routes import setup_routes
 
