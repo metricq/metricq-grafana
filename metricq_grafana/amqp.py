@@ -13,6 +13,7 @@ from metricq import get_logger
 
 logger = get_logger(__name__)
 
+
 async def get_history_data(app, request):
     targets = [x["target"] for x in request["targets"]]
     results = []
@@ -58,12 +59,13 @@ async def get_history_data(app, request):
             for timed, value in zipped_tv:
                 dp = rep_dict["datapoints"]
                 last_timed += timed
-                dp.append((value , (last_timed) / (10 ** 6) ))
+                dp.append(value,(last_timed / (10 ** 6)))
                 rep_dict["datapoints"] = dp
 
             results.append(rep_dict)
 
     return results
+
 
 async def get_metric_list(app, search_query):
     selector = "^(.+\\.)?{}.*$".format(re.escape(search_query))
