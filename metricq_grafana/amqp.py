@@ -6,12 +6,20 @@ import re
 from statistics import mean
 import time
 import uuid
+import math
 
 import aio_pika
 
 from metricq import get_logger
 
 logger = get_logger(__name__)
+
+
+def sanitize_number(value):
+    """ Convert NaN and Inf to None - because JSON is dumb """
+    if math.isfinite(value):
+        return value
+    return None
 
 
 async def get_history_data(app, request):
@@ -59,7 +67,7 @@ async def get_history_data(app, request):
             for timed, value in zipped_tv:
                 dp = rep_dict["datapoints"]
                 last_timed += timed
-                dp.append(value,(last_timed / (10 ** 6)))
+                dp.append(sanitize_number(value), (last_timed / (10 ** 6)))
                 rep_dict["datapoints"] = dp
 
             results.append(rep_dict)
