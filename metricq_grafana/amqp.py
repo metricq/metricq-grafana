@@ -32,7 +32,7 @@ async def get_history_data(app, request):
             target_metric = "/".join(target_split[:-1])
             target_types = [target_split[-1]]
         else:
-            target_metric = "/".join(target_split[:-1])
+            target_metric = target
             target_types = ["avg"]
         template_var_match = re.fullmatch(r"\((?P<multitype>((min|max|avg)\|?)+)\)", target_types[0])
         if template_var_match:
