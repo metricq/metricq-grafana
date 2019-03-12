@@ -40,10 +40,11 @@ async def get_history_data(app, request):
         start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         interval_ns = request["intervalMs"] * 10 ** 6
-        perf_start_time = time.perf_counter()
+        perf_start_time = time.perf_counter_ns()
         rep = await app['history_client'].history_data_request(target_metric, start_time, end_time, interval_ns)
-        perf_end_time = time.perf_counter()
-        time_delta = (perf_end_time - perf_start_time)
+        perf_end_time = time.perf_counter_ns()
+        time_delta_ns = (perf_end_time - perf_start_time)
+        time_delta = time_delta_ns / (10 ** 9)
         app['last_perf_list'].insert(0, time_delta)
         if 'last_perf_log' not in app or app['last_perf_log'] < datetime.datetime.now() - datetime.timedelta(seconds=10):
             app['last_perf_list'] = app['last_perf_list'][:100]
@@ -54,7 +55,7 @@ async def get_history_data(app, request):
             app['last_perf_log'] = datetime.datetime.now()
 
         for target_type in target_types:
-            rep_dict = {"target": "{}/{}".format(target_metric, target_type), "datapoints": [] }
+            rep_dict = {"target": "{}/{}".format(target_metric, target_type), "datapoints": [], "time_measurements": {"db": rep.request_duration, "http": str(time_delta_ns)} }
             last_timed = 0
 
             if target_type == "min":
