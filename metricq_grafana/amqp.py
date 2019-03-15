@@ -11,37 +11,21 @@ import math
 import aio_pika
 
 from metricq import get_logger
+from .utils import Target
 
 logger = get_logger(__name__)
 
 
-def sanitize_number(value):
-    """ Convert NaN and Inf to None - because JSON is dumb """
-    if math.isfinite(value):
-        return value
-    return None
-
-
 async def get_history_data(app, request):
-    targets = [x["target"] for x in request["targets"]]
+    targets = [Target.extract_from_string(x["target"]) for x in request["targets"]]
     results = []
 
     for target in targets:
-        target_split = target.split("/")
-        if len(target_split) > 1:
-            target_metric = "/".join(target_split[:-1])
-            target_types = [target_split[-1]]
-        else:
-            target_metric = target
-            target_types = ["avg"]
-        template_var_match = re.fullmatch(r"\((?P<multitype>((min|max|avg)\|?)+)\)", target_types[0])
-        if template_var_match:
-            target_types = template_var_match.group("multitype").split("|")
         start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         interval_ns = request["intervalMs"] * 10 ** 6
         perf_start_time = time.perf_counter_ns()
-        rep = await app['history_client'].history_data_request(target_metric, start_time, end_time, interval_ns)
+        rep = await app['history_client'].history_data_request(target.target, start_time, end_time, interval_ns)
         perf_end_time = time.perf_counter_ns()
         time_delta_ns = (perf_end_time - perf_start_time)
         time_delta = time_delta_ns / (10 ** 9)
@@ -54,24 +38,7 @@ async def get_history_data(app, request):
             logger.info('Last 100 metricq data reponse times: min {}, max {}, avg {}', min_value, max_value, avg_value)
             app['last_perf_log'] = datetime.datetime.now()
 
-        for target_type in target_types:
-            rep_dict = {"target": "{}/{}".format(target_metric, target_type), "datapoints": [], "time_measurements": {"db": rep.request_duration, "http": str(time_delta_ns)} }
-            last_timed = 0
-
-            if target_type == "min":
-                zipped_tv = zip(rep.time_delta, rep.value_min)
-            elif target_type == "max":
-                zipped_tv = zip(rep.time_delta, rep.value_max)
-            else:
-                zipped_tv = zip(rep.time_delta, rep.value_avg)
-
-            for timed, value in zipped_tv:
-                dp = rep_dict["datapoints"]
-                last_timed += timed
-                dp.append((sanitize_number(value), (last_timed / (10 ** 6))))
-                rep_dict["datapoints"] = dp
-
-            results.append(rep_dict)
+        results.extend(target.convert_response(rep, time_delta_ns))
 
     return results
 
