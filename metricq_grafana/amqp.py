@@ -21,6 +21,7 @@ async def get_history_data(app, request):
     results = []
 
     for target in targets:
+        pull_description_future = target.pull_description(app)
         start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         interval_ns = request["intervalMs"] * 10 ** 6
@@ -38,6 +39,7 @@ async def get_history_data(app, request):
             logger.info('Last 100 metricq data reponse times: min {}, max {}, avg {}', min_value, max_value, avg_value)
             app['last_perf_log'] = datetime.datetime.now()
 
+        await pull_description_future
         results.extend(target.convert_response(rep, time_delta_ns))
 
     return results
