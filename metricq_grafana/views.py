@@ -1,4 +1,5 @@
 """Module for view functions"""
+from asyncio import futures
 from aiohttp import web
 
 from metricq import get_logger
@@ -11,7 +12,10 @@ logger = get_logger(__name__)
 async def query(request):
     req_json = await request.json()
     logger.debug("Query request data: {}", req_json)
-    resp = await get_history_data(request.app, req_json)
+    try:
+        resp = await get_history_data(request.app, req_json)
+    except futures.TimeoutError:
+        raise web.HTTPFound()
     return web.json_response(
         resp
     )
