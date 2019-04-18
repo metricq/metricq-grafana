@@ -136,7 +136,7 @@ class Target:
             tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
         interval_ns = request["intervalMs"] * 10 ** 6
         perf_start_time = time.perf_counter_ns()
-        self.response = await app['history_client'].history_data_request(self.target, start_time, end_time, interval_ns)
+        self.response = await app['history_client'].history_data_request(self.target, start_time, end_time, interval_ns, timeout=5)
         perf_end_time = time.perf_counter_ns()
         self.time_delta_ns = (perf_end_time - perf_start_time)
 
