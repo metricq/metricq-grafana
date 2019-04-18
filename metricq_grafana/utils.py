@@ -1,5 +1,8 @@
+import asyncio
+import datetime
 import math
 import re
+import time
 
 
 def sanitize_number(value):
@@ -22,6 +25,8 @@ class Target:
         self.alias_type = None
         self.alias_value = ""
         self.aggregation_types = ["avg"]
+        self.response = None
+        self.time_delta_ns = None
 
     @classmethod
     def extract_from_string(cls, target_string: str):
@@ -53,12 +58,12 @@ class Target:
             suffix_length = 1
         elif target_string.startswith("aliasByDescription("):
             self.alias_type = Target.DESC
-            self.alias_value = "This is where your description should be"
+            self.alias_value = "No description found"
             prefix_length = len("aliasByDescription(")
             suffix_length = 1
         elif target_string.startswith("aliasByMetricAndDescription("):
             self.alias_type = Target.METRICDESC
-            self.alias_value = "This is where your description should be"
+            self.alias_value = "No description found"
             prefix_length = len("aliasByMetricAndDescription(")
             suffix_length = 1
         if prefix_length:
@@ -123,3 +128,21 @@ class Target:
         if "description" in metadata[self.target]:
             self.alias_value = metadata[self.target]["description"]
         return
+
+    async def pull_data(self, app, request):
+        start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+            tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
+        end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+            tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
+        interval_ns = request["intervalMs"] * 10 ** 6
+        perf_start_time = time.perf_counter_ns()
+        self.response = await app['history_client'].history_data_request(self.target, start_time, end_time, interval_ns)
+        perf_end_time = time.perf_counter_ns()
+        self.time_delta_ns = (perf_end_time - perf_start_time)
+
+    async def get_response(self, app, request):
+        await asyncio.wait([self.pull_data(app, request), self.pull_description(app)])
+
+        if self.response is None or self.time_delta_ns is None:
+            return []
+        return self.convert_response(self.response, self.time_delta_ns)
