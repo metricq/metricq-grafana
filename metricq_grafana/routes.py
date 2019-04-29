@@ -1,5 +1,5 @@
 """Module for route setup"""
-from .views import query, search
+from .views import query, search, legacy_cntr_status, legacy_counter_data
 
 
 def setup_routes(app, cors):
@@ -9,3 +9,9 @@ def setup_routes(app, cors):
 
     resource = cors.add(app.router.add_resource("/search"))
     cors.add(resource.add_route("POST", search))
+
+    resource = cors.add(app.router.add_resource("/legacy/cntr_status.php"))
+    cors.add(resource.add_route("POST", legacy_cntr_status))
+
+    resource = cors.add(app.router.add_resource("/legacy/counter_data.php"))
+    cors.add(resource.add_route("GET", legacy_counter_data))

@@ -4,7 +4,7 @@ from aiohttp import web
 
 from metricq import get_logger
 
-from .amqp import get_history_data, get_metric_list
+from .amqp import get_history_data, get_metric_list, get_counter_list, get_counter_data
 
 logger = get_logger(__name__)
 
@@ -26,3 +26,19 @@ async def search(request):
     logger.debug("Search query: {}", search_query)
     metric_list = await get_metric_list(request.app, search_query)
     return web.json_response(metric_list)
+
+
+async def legacy_cntr_status(request):
+    data = await request.post()
+    if "selector" not in data:
+        raise web.HTTPBadRequest()
+    counter_list = await get_counter_list(request.app, data["selector"])
+    return web.Response(text="\n".join([";".join(cntr) for cntr in counter_list]))
+
+
+async def legacy_counter_data(request):
+    data = request.query
+    if not all([k in data for k in ["cntr", "start", "stop", "width"]]):
+        raise web.HTTPBadRequest()
+    counter_data = await get_counter_data(request.app, data["cntr"], int(data["start"]), int(data["stop"]), int(data["width"]))
+    return web.json_response(counter_data)

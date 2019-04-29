@@ -29,3 +29,27 @@ async def get_metric_list(app, search_query):
         lists = [["{}/{}".format(metric, type) for type in ["min", "max", "avg"]] for metric in result]
         return sorted([x for t in zip(*lists) for x in t])
     return []
+
+
+async def get_counter_list(app, selector):
+    metrics = await app["history_client"].history_metric_metadata(selector=selector)
+    result = []
+    for metric in metrics:
+        result.append([metric, metrics[metric].get("description", "")])
+    return result
+
+
+async def get_counter_data(app, metric, start, stop, width):
+    target = Target.extract_from_string(metric)
+    start_time_ns = start * 10 ** 6
+    end_time_ns = stop * 10 ** 6
+    interval_ns = (end_time_ns - start_time_ns) // width
+    results = await target.get_response(app, start_time_ns, end_time_ns, interval_ns)
+    result = results[0] if len(results) > 0 else {"datapoints": []}
+    metadata = await target.get_metadata(app)
+
+    return {
+        "description": metadata.get("description", ""),
+        "unit": metadata.get("unit", ""),
+        "data": result["datapoints"]
+    }
