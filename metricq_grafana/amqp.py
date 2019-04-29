@@ -40,7 +40,7 @@ async def get_counter_list(app, selector):
 
 
 async def get_counter_data(app, metric, start, stop, width):
-    target = Target.extract_from_string(metric)
+    target = Target.extract_from_string(metric, order_time_value=True)
     start_time_ns = start * 10 ** 6
     end_time_ns = stop * 10 ** 6
     interval_ns = (end_time_ns - start_time_ns) // width

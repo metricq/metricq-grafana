@@ -27,9 +27,10 @@ class Target:
         self.response = None
         self.time_delta_ns = None
         self.metadata = None
+        self.order_time_value = False
 
     @classmethod
-    def extract_from_string(cls, target_string: str):
+    def extract_from_string(cls, target_string: str, order_time_value: bool=False):
         target = cls()
         target_string = target._extract_alias(target_string)
         target_split = target_string.split("/")
@@ -41,6 +42,7 @@ class Target:
         template_var_match = re.fullmatch(r"\((?P<multitype>((min|max|avg)\|?)+)\)", target.aggregation_types[0])
         if template_var_match:
             target.aggregation_types = template_var_match.group("multitype").split("|")
+        target.order_time_value = order_time_value
         return target
 
     def _extract_alias(self, target_string) -> str:
@@ -93,7 +95,10 @@ class Target:
             for timed, value in zipped_tv:
                 dp = rep_dict["datapoints"]
                 last_timed += timed
-                dp.append((sanitize_number(value), (last_timed / (10 ** 6))))
+                if not self.order_time_value:
+                    dp.append((sanitize_number(value), (last_timed / (10 ** 6))))
+                else:
+                    dp.append((last_timed / (10 ** 6), sanitize_number(value)))
                 rep_dict["datapoints"] = dp
 
             results.append(rep_dict)
