@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import functools
 import re
 import operator
@@ -11,7 +12,12 @@ logger = get_logger(__name__)
 
 async def get_history_data(app, request):
     targets = [Target.extract_from_string(x["target"]) for x in request["targets"]]
-    results = await asyncio.gather(*[target.get_response(app, request) for target in targets])
+    start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+        tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
+    end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+        tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
+    interval_ns = request["intervalMs"] * 10 ** 6
+    results = await asyncio.gather(*[target.get_response(app, start_time, end_time, interval_ns) for target in targets])
 
     return functools.reduce(operator.iconcat, results, [])
 

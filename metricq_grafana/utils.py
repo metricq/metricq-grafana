@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import math
 import re
 import time
@@ -27,6 +26,7 @@ class Target:
         self.aggregation_types = ["avg"]
         self.response = None
         self.time_delta_ns = None
+        self.metadata = None
 
     @classmethod
     def extract_from_string(cls, target_string: str):
@@ -122,27 +122,33 @@ class Target:
     async def pull_description(self, app):
         if self.alias_type not in (Target.DESC, Target.METRICDESC):
             return
-        metadata = await app["history_client"].history_metric_metadata(selector=self.get_target_as_regex())
+        metadata = await self.get_metadata(app)
         if self.target not in metadata:
             return
         if "description" in metadata[self.target]:
             self.alias_value = metadata[self.target]["description"]
         return
 
-    async def pull_data(self, app, request):
-        start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-            tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
-        end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-            tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
-        interval_ns = request["intervalMs"] * 10 ** 6
+    async def pull_data(self, app, start_time_ns, end_time_ns, interval_ns):
         perf_start_time = time.perf_counter_ns()
-        self.response = await app['history_client'].history_data_request(self.target, start_time, end_time, interval_ns, timeout=5)
+        self.response = await app['history_client'].history_data_request(self.target, start_time_ns, end_time_ns, interval_ns, timeout=5)
         perf_end_time = time.perf_counter_ns()
         self.time_delta_ns = (perf_end_time - perf_start_time)
 
-    async def get_response(self, app, request):
-        await asyncio.wait([self.pull_data(app, request), self.pull_description(app)])
+    async def get_response(self, app, start_time_ns, end_time_ns, interval_ns):
+        await asyncio.wait([self.pull_data(app, start_time_ns, end_time_ns, interval_ns), self.pull_description(app)])
 
         if self.response is None or self.time_delta_ns is None:
             return []
         return self.convert_response(self.response, self.time_delta_ns)
+
+    async def pull_metadata(self, app):
+        result = await app["history_client"].history_metric_metadata(selector=self.get_target_as_regex())
+        self.metadata = result.get(self.target, None)
+
+    async def get_metadata(self, app):
+        if self.metadata:
+            return self.metadata
+
+        await self.pull_metadata(app)
+        return self.metadata
