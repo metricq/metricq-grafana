@@ -11,9 +11,10 @@ from aiohttp import web
 import aiohttp_cors
 import aio_pika
 
-from metricq import get_logger, HistoryClient
+from metricq import get_logger
 
 from .routes import setup_routes
+from .client import Client
 
 logger = get_logger()
 
@@ -25,7 +26,7 @@ logger.handlers[0].formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)-
 click_completion.init()
 
 async def start_background_tasks(app):
-    app['history_client'] = HistoryClient(app['token'], app["management_url"], event_loop=app.loop)
+    app['history_client'] = Client(app['token'], app["management_url"], event_loop=app.loop)
     await app['history_client'].connect()
 
 

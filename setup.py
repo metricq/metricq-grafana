@@ -10,4 +10,5 @@ setup(name='metricq_grafana',
       [console_scripts]
       metricq-grafana=metricq_grafana:runserver_cmd
       ''',
-      install_requires=['aio-pika', 'aiohttp', 'aiohttp-cors', 'click', 'click-completion', 'click_log', 'colorama', 'protobuf', 'metricq'])
+      install_requires=['aio-pika', 'aiohttp', 'aiohttp-cors', 'click', 'click-completion', 'click_log', 'colorama',
+                        'protobuf', 'metricq', 'aiocache'])
