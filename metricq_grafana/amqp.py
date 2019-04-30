@@ -57,9 +57,10 @@ async def get_counter_data(app, metric, start, stop, width):
     start_time_ns = start * 10 ** 6
     end_time_ns = stop * 10 ** 6
     interval_ns = (end_time_ns - start_time_ns) // width
-    results = await target.get_response(app, start_time_ns, end_time_ns, interval_ns)
+    results, metadata = await asyncio.gather(
+        target.get_response(app, start_time_ns, end_time_ns, interval_ns),
+        target.get_metadata(app))
     result = results[0] if len(results) > 0 else {"datapoints": []}
-    metadata = await target.get_metadata(app)
 
     rv = {
         "description": metadata.get("description", ""),
