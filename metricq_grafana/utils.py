@@ -28,6 +28,9 @@ class Target:
         self.time_delta_ns = None
         self.metadata = None
         self.order_time_value = False
+        self.moving_average_interval = None
+        self.start_time_ns = None
+        self.end_time_ns = None
 
     @classmethod
     def extract_from_string(cls, target_string: str, order_time_value: bool=False):
@@ -68,6 +71,12 @@ class Target:
             self.alias_value = "No description found"
             prefix_length = len("aliasByMetricAndDescription(")
             suffix_length = 1
+        elif target_string.startswith("movingAverageWithAlias("):
+            self.alias_type = Target.ALIAS
+            self.alias_value = ",".join(target_string.split(",")[1:-1])
+            self.moving_average_interval = int(target_string.split(",")[-1][:-1])
+            prefix_length = len("movingAverageWithAlias(")
+            suffix_length = len(",".join(target_string.split(",")[1:])[:-1]) + 2  # remove alias string, separation comma, moving average window, closing bracket and separation comma
         if prefix_length:
             extracted_target_string = target_string[prefix_length:-suffix_length]
         return extracted_target_string
@@ -92,14 +101,42 @@ class Target:
             else:
                 zipped_tv = zip(response.time_delta, response.value_avg)
 
+            moving_interval_start = 0
+            dp = rep_dict["datapoints"]
             for timed, value in zipped_tv:
-                dp = rep_dict["datapoints"]
                 last_timed += timed
+                if last_timed < self.start_time_ns:
+                    moving_interval_start += 1
                 if not self.order_time_value:
                     dp.append((sanitize_number(value), (last_timed / (10 ** 6))))
                 else:
                     dp.append((last_timed / (10 ** 6), sanitize_number(value)))
-                rep_dict["datapoints"] = dp
+
+            rep_dict["datapoints"] = dp
+
+            if self.moving_average_interval:
+                print(f"{len(dp)}")
+                moving_interval_size_half = moving_interval_start
+                avg_datapoints = []
+                sum = 0
+                if not self.order_time_value:
+                    value_index = 0
+                else:
+                    value_index = 1
+
+                for i in range(- moving_interval_start, len(rep_dict["datapoints"]) - moving_interval_size_half):
+                    timestamp = dp[i][1 - value_index]
+                    sum += dp[i + moving_interval_size_half][value_index]
+                    if i - moving_interval_size_half >= 0:
+                        sum -= dp[i + moving_interval_size_half][value_index]
+                    if (timestamp * 10 ** 6) >= self.start_time_ns and (timestamp * 10 ** 6) <= self.end_time_ns:
+                        avg = sum / (moving_interval_size_half * 2 + 1)
+                        if not self.order_time_value:
+                            avg_datapoints.append((sanitize_number(avg), timestamp))
+                        else:
+                            avg_datapoints.append((timestamp, sanitize_number(avg)))
+                print(f"Avg {len(avg_datapoints)}")
+                rep_dict["datapoints"] = avg_datapoints
 
             results.append(rep_dict)
 
@@ -136,7 +173,14 @@ class Target:
 
     async def pull_data(self, app, start_time_ns, end_time_ns, interval_ns):
         perf_start_time = time.perf_counter_ns()
-        self.response = await app['history_client'].history_data_request(self.target, start_time_ns, end_time_ns, interval_ns, timeout=5)
+        before_start_interval = 0
+        after_end_interval = 0
+        self.start_time_ns = start_time_ns
+        self.end_time_ns = end_time_ns
+        if self.moving_average_interval:
+            before_start_interval = self.moving_average_interval // 2
+            after_end_interval = self.moving_average_interval - before_start_interval
+        self.response = await app['history_client'].history_data_request(self.target, start_time_ns - before_start_interval, end_time_ns + after_end_interval, interval_ns, timeout=5)
         perf_end_time = time.perf_counter_ns()
         self.time_delta_ns = (perf_end_time - perf_start_time)
 
