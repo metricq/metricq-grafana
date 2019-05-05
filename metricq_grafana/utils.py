@@ -102,11 +102,14 @@ class Target:
                 zipped_tv = zip(response.time_delta, response.value_avg)
 
             moving_interval_start = 0
+            normal_interval_count = 0
             dp = rep_dict["datapoints"]
             for timed, value in zipped_tv:
                 last_timed += timed
                 if last_timed < self.start_time_ns:
                     moving_interval_start += 1
+                if last_timed >= self.start_time_ns and last_timed <= self.end_time_ns:
+                    normal_interval_count += 1
                 if not self.order_time_value:
                     dp.append((sanitize_number(value), (last_timed / (10 ** 6))))
                 else:
@@ -115,6 +118,7 @@ class Target:
             rep_dict["datapoints"] = dp
 
             if self.moving_average_interval:
+                print(f"Moving average_start {moving_interval_start}, normal count {normal_interval_count}")
                 print(f"{len(dp)}")
                 moving_interval_size_half = moving_interval_start
                 avg_datapoints = []
@@ -124,11 +128,15 @@ class Target:
                 else:
                     value_index = 1
 
-                for i in range(- moving_interval_start, len(rep_dict["datapoints"]) - moving_interval_size_half):
+                last_timed = 0
+                for i in range(0, len(rep_dict["datapoints"]) - moving_interval_size_half):
                     timestamp = dp[i][1 - value_index]
+                    if timestamp <= last_timed:
+                        print(f"Current timestamp ({i}, {timestamp}) is <= last timestamp ({last_timed})")
+                    last_timed = timestamp
                     sum += dp[i + moving_interval_size_half][value_index]
-                    if i - moving_interval_size_half >= 0:
-                        sum -= dp[i + moving_interval_size_half][value_index]
+                    if i >= moving_interval_size_half:
+                        sum -= dp[i - moving_interval_size_half][value_index]
                     if (timestamp * 10 ** 6) >= self.start_time_ns and (timestamp * 10 ** 6) <= self.end_time_ns:
                         avg = sum / (moving_interval_size_half * 2 + 1)
                         if not self.order_time_value:
@@ -136,6 +144,11 @@ class Target:
                         else:
                             avg_datapoints.append((timestamp, sanitize_number(avg)))
                 print(f"Avg {len(avg_datapoints)}")
+                last_timed = self.start_time_ns
+                for i, (_, timed) in enumerate(avg_datapoints):
+                    if timed <= last_timed:
+                        print(f"Current timestamp ({i}) is <= last timestamp")
+                    last_timed = timed
                 rep_dict["datapoints"] = avg_datapoints
 
             results.append(rep_dict)
@@ -178,8 +191,8 @@ class Target:
         self.start_time_ns = start_time_ns
         self.end_time_ns = end_time_ns
         if self.moving_average_interval:
-            before_start_interval = self.moving_average_interval // 2
-            after_end_interval = self.moving_average_interval - before_start_interval
+            before_start_interval = (self.moving_average_interval * 10 ** 6) // 2
+            after_end_interval = (self.moving_average_interval * 10 ** 6) - before_start_interval
         self.response = await app['history_client'].history_data_request(self.target, start_time_ns - before_start_interval, end_time_ns + after_end_interval, interval_ns, timeout=5)
         perf_end_time = time.perf_counter_ns()
         self.time_delta_ns = (perf_end_time - perf_start_time)
