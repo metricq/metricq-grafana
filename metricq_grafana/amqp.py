@@ -6,6 +6,7 @@ import operator
 import time
 
 from metricq import get_logger
+from metricq.types import Timestamp, Timedelta
 from .utils import Target
 
 logger = get_logger(__name__)
@@ -15,12 +16,10 @@ timer = time.monotonic
 async def get_history_data(app, request):
     time_begin = timer()
     targets = [Target.extract_from_string(x["target"]) for x in request["targets"]]
-    start_time = int(datetime.datetime.strptime(request["range"]["from"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-        tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
-    end_time = int(datetime.datetime.strptime(request["range"]["to"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-        tzinfo=datetime.timezone.utc).timestamp() * (10 ** 9))
-    interval_ns = request["intervalMs"] * 10 ** 6
-    results = await asyncio.gather(*[target.get_response(app, start_time, end_time, interval_ns) for target in targets])
+    start_time = Timestamp.from_iso8601(request["range"]["from"])
+    end_time = Timestamp.from_iso8601(request["range"]["to"])
+    interval = Timedelta(request["intervalMs"] * 10 ** 6)
+    results = await asyncio.gather(*[target.get_response(app, start_time, end_time, interval) for target in targets])
     rv = functools.reduce(operator.iconcat, results, [])
     logger.info('get_history_data for {} targets took {} s', len(targets), timer() - time_begin)
     return rv
@@ -54,11 +53,11 @@ async def get_counter_list(app, selector):
 async def get_counter_data(app, metric, start, stop, width):
     time_begin = timer()
     target = Target.extract_from_string(metric, order_time_value=True)
-    start_time_ns = start * 10 ** 6
-    end_time_ns = stop * 10 ** 6
-    interval_ns = (end_time_ns - start_time_ns) // width
+    start_time = Timestamp(start * 10 ** 6)
+    end_time = Timestamp(stop * 10 ** 6)
+    interval = Timestamp((end_time.ns - start_time.ns) // width)
     results, metadata = await asyncio.gather(
-        target.get_response(app, start_time_ns, end_time_ns, interval_ns),
+        target.get_response(app, start_time, end_time, interval),
         target.get_metadata(app))
     result = results[0] if len(results) > 0 else {"datapoints": []}
 

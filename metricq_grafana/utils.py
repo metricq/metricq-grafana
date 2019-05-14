@@ -3,6 +3,11 @@ import math
 import re
 import time
 
+from metricq import get_logger
+from metricq.history_client import HistoryResponse
+from metricq.types import Timedelta, Timestamp
+
+logger = get_logger(__name__)
 
 def sanitize_number(value):
     """ Convert NaN and Inf to None - because JSON is dumb """
@@ -29,8 +34,8 @@ class Target:
         self.metadata = None
         self.order_time_value = False
         self.moving_average_interval = None
-        self.start_time_ns = None
-        self.end_time_ns = None
+        self.start_time: Timestamp = None
+        self.end_time: Timestamp = None
 
     @classmethod
     def extract_from_string(cls, target_string: str, order_time_value: bool=False):
@@ -84,7 +89,7 @@ class Target:
     def get_target_as_regex(self):
         return "^{}$".format(re.escape(self.target))
 
-    def convert_response(self, response, time_measurement):
+    def convert_response(self, response: HistoryResponse, time_measurement):
         results = []
         for target_type in self.aggregation_types:
             rep_dict = {
@@ -92,34 +97,31 @@ class Target:
                 "datapoints": [],
                 "time_measurements": {"db": response.request_duration, "http": str(time_measurement)}
             }
-            last_timed = 0
-
-            if target_type == "min":
-                zipped_tv = zip(response.time_delta, response.value_min)
-            elif target_type == "max":
-                zipped_tv = zip(response.time_delta, response.value_max)
-            else:
-                zipped_tv = zip(response.time_delta, response.value_avg)
 
             moving_interval_start = 0
             normal_interval_count = 0
             dp = rep_dict["datapoints"]
-            for timed, value in zipped_tv:
-                last_timed += timed
-                if last_timed < self.start_time_ns:
+            for timeaggregate in response.aggregates():
+                if timeaggregate.timestamp < self.start_time:
                     moving_interval_start += 1
-                if last_timed >= self.start_time_ns and last_timed <= self.end_time_ns:
+                if timeaggregate.timestamp >= self.start_time and timeaggregate.timestamp <= self.end_time:
                     normal_interval_count += 1
-                if not self.order_time_value:
-                    dp.append((sanitize_number(value), (last_timed / (10 ** 6))))
+                if target_type == "min":
+                    value = timeaggregate.minimum
+                elif target_type == "max":
+                    value = timeaggregate.maximum
                 else:
-                    dp.append((last_timed / (10 ** 6), sanitize_number(value)))
+                    value = timeaggregate.mean
+
+                if not self.order_time_value:
+                    dp.append((sanitize_number(value), timeaggregate.timestamp.posix_ms))
+                else:
+                    dp.append((timeaggregate.timestamp.posix_ms, sanitize_number(value)))
 
             rep_dict["datapoints"] = dp
 
             if self.moving_average_interval:
-                print(f"Moving average_start {moving_interval_start}, normal count {normal_interval_count}")
-                print(f"{len(dp)}")
+                logger.debug(f"Moving average_start {moving_interval_start}, normal count {normal_interval_count}")
                 moving_interval_size_half = moving_interval_start
                 avg_datapoints = []
                 sum = 0
@@ -132,22 +134,22 @@ class Target:
                 for i in range(0, len(rep_dict["datapoints"]) - moving_interval_size_half):
                     timestamp = dp[i][1 - value_index]
                     if timestamp <= last_timed:
-                        print(f"Current timestamp ({i}, {timestamp}) is <= last timestamp ({last_timed})")
+                        logger.warning(f"Current timestamp ({i}, {timestamp}) is <= last timestamp ({last_timed})")
                     last_timed = timestamp
                     sum += dp[i + moving_interval_size_half][value_index]
                     if i >= moving_interval_size_half:
                         sum -= dp[i - moving_interval_size_half][value_index]
-                    if (timestamp * 10 ** 6) >= self.start_time_ns and (timestamp * 10 ** 6) <= self.end_time_ns:
+                    if timestamp >= self.start_time.posix_ms and timestamp <= self.end_time.posix_ms:
                         avg = sum / (moving_interval_size_half * 2 + 1)
                         if not self.order_time_value:
                             avg_datapoints.append((sanitize_number(avg), timestamp))
                         else:
                             avg_datapoints.append((timestamp, sanitize_number(avg)))
-                print(f"Avg {len(avg_datapoints)}")
-                last_timed = self.start_time_ns
+                logger.debug(f"Avg {len(avg_datapoints)}")
+                last_timed = self.start_time.posix_ms
                 for i, (_, timed) in enumerate(avg_datapoints):
                     if timed <= last_timed:
-                        print(f"Current timestamp ({i}) is <= last timestamp")
+                        logger.warning(f"Current timestamp ({i}) is <= last timestamp")
                     last_timed = timed
                 rep_dict["datapoints"] = avg_datapoints
 
@@ -184,21 +186,21 @@ class Target:
             self.alias_value = metadata[self.target]["description"]
         return
 
-    async def pull_data(self, app, start_time_ns, end_time_ns, interval_ns):
+    async def pull_data(self, app, start_time, end_time, interval):
         perf_start_time = time.perf_counter_ns()
         before_start_interval = 0
         after_end_interval = 0
-        self.start_time_ns = start_time_ns
-        self.end_time_ns = end_time_ns
+        self.start_time = start_time
+        self.end_time = end_time
         if self.moving_average_interval:
-            before_start_interval = (self.moving_average_interval * 10 ** 6) // 2
-            after_end_interval = (self.moving_average_interval * 10 ** 6) - before_start_interval
-        self.response = await app['history_client'].history_data_request(self.target, start_time_ns - before_start_interval, end_time_ns + after_end_interval, interval_ns, timeout=5)
+            before_start_interval = Timedelta((self.moving_average_interval * 10 ** 6) // 2)
+            after_end_interval = Timedelta((self.moving_average_interval * 10 ** 6) - before_start_interval)
+        self.response = await app['history_client'].history_data_request(self.target, start_time - before_start_interval, end_time + after_end_interval, interval, timeout=5)
         perf_end_time = time.perf_counter_ns()
         self.time_delta_ns = (perf_end_time - perf_start_time)
 
-    async def get_response(self, app, start_time_ns, end_time_ns, interval_ns):
-        await asyncio.wait([self.pull_data(app, start_time_ns, end_time_ns, interval_ns), self.pull_description(app)])
+    async def get_response(self, app, start_time, end_time, interval):
+        await asyncio.wait([self.pull_data(app, start_time, end_time, interval), self.pull_description(app)])
 
         if self.response is None or self.time_delta_ns is None:
             return []
