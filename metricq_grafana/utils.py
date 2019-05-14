@@ -101,7 +101,7 @@ class Target:
             moving_interval_start = 0
             normal_interval_count = 0
             dp = rep_dict["datapoints"]
-            for timeaggregate in response.aggregates():
+            for timeaggregate in response.aggregates(convert=True):
                 if timeaggregate.timestamp < self.start_time:
                     moving_interval_start += 1
                 if timeaggregate.timestamp >= self.start_time and timeaggregate.timestamp <= self.end_time:
