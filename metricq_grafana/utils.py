@@ -188,8 +188,8 @@ class Target:
 
     async def pull_data(self, app, start_time, end_time, interval):
         perf_start_time = time.perf_counter_ns()
-        before_start_interval = 0
-        after_end_interval = 0
+        before_start_interval = Timedelta(0)
+        after_end_interval = Timedelta(0)
         self.start_time = start_time
         self.end_time = end_time
         if self.moving_average_interval:
