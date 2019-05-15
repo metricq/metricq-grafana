@@ -113,6 +113,11 @@ class Target:
                 else:
                     value = timeaggregate.mean
 
+                if timeaggregate.count == 0 and not self.moving_average_interval:
+                    # Don't insert empty intervals with no data to avoid confusing visualization
+                    # However, this would complicate moving average computation, so we retain them in this case
+                    continue
+
                 if not self.order_time_value:
                     dp.append((sanitize_number(value), timeaggregate.timestamp.posix_ms))
                 else:
