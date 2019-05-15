@@ -55,7 +55,7 @@ async def get_counter_data(app, metric, start, stop, width):
     target = Target.extract_from_string(metric, order_time_value=True)
     start_time = Timestamp(start * 10 ** 6)
     end_time = Timestamp(stop * 10 ** 6)
-    interval = Timestamp((end_time.ns - start_time.ns) // width)
+    interval = end_time - start_time / width
     results, metadata = await asyncio.gather(
         target.get_response(app, start_time, end_time, interval),
         target.get_metadata(app))
