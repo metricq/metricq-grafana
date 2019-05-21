@@ -1,10 +1,11 @@
 """Module for view functions"""
 from asyncio import futures
+
 from aiohttp import web
 
 from metricq import get_logger
 
-from .amqp import get_history_data, get_metric_list, get_counter_list, get_counter_data
+from .amqp import get_counter_data, get_counter_list, get_history_data, get_metric_list
 
 logger = get_logger(__name__)
 

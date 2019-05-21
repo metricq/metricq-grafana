@@ -1,5 +1,5 @@
 """Module for route setup"""
-from .views import query, search, legacy_cntr_status, legacy_counter_data
+from .views import legacy_cntr_status, legacy_counter_data, query, search
 
 
 def setup_routes(app, cors):

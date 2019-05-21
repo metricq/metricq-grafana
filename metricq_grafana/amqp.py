@@ -1,12 +1,13 @@
 import asyncio
 import datetime
 import functools
-import re
 import operator
+import re
 import time
 
 from metricq import get_logger
-from metricq.types import Timestamp, Timedelta
+from metricq.types import Timedelta, Timestamp
+
 from .utils import Target
 
 logger = get_logger(__name__)

@@ -1,4 +1,4 @@
-from aiocache import cached, SimpleMemoryCache
+from aiocache import SimpleMemoryCache, cached
 
 from metricq import HistoryClient
 

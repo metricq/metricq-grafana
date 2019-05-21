@@ -1,20 +1,19 @@
 """Main module for running http server"""
-import traceback
+import asyncio
 import logging
+import traceback
 
+import aio_pika
+import aiohttp_cors
 import click
 import click_completion
 import click_log
-
-import asyncio
 from aiohttp import web
-import aiohttp_cors
-import aio_pika
 
 from metricq import get_logger
 
-from .routes import setup_routes
 from .client import Client
+from .routes import setup_routes
 
 logger = get_logger()
 
