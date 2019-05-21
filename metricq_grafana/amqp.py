@@ -28,7 +28,7 @@ async def get_history_data(app, request):
 async def get_metric_list(app, search_query):
     time_begin = timer()
     selector = "^(.+\\.)?{}.*$".format(re.escape(search_query))
-    result = await app["history_client"].history_metric_list(selector=selector)
+    result = await app["history_client"].get_metrics(selector=selector)
     if result:
         lists = [["{}/{}".format(metric, type) for type in ["min", "max", "avg"]] for metric in result]
         rv = sorted([x for t in zip(*lists) for x in t])
@@ -41,7 +41,7 @@ async def get_metric_list(app, search_query):
 
 async def get_counter_list(app, selector):
     time_begin = timer()
-    metrics = await app["history_client"].history_metric_metadata(selector=selector)
+    metrics = await app["history_client"].get_metrics(selector=selector)
     result = []
     for metric, metadata in metrics.items():
         result.append([metric, metadata.get("description", "")])
