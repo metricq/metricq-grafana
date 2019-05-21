@@ -9,6 +9,7 @@ from metricq.types import Timedelta, Timestamp
 
 logger = get_logger(__name__)
 
+
 def sanitize_number(value):
     """ Convert NaN and Inf to None - because JSON is dumb """
     if math.isfinite(value):
@@ -38,7 +39,7 @@ class Target:
         self.end_time: Timestamp = None
 
     @classmethod
-    def extract_from_string(cls, target_string: str, order_time_value: bool=False):
+    def extract_from_string(cls, target_string: str, order_time_value: bool = False):
         target = cls()
         target_string = target._extract_alias(target_string)
         target_split = target_string.split("/")
@@ -47,7 +48,9 @@ class Target:
             target.aggregation_types = [target_split[-1]]
         else:
             target.target = target_string
-        template_var_match = re.fullmatch(r"\((?P<multitype>((min|max|avg)\|?)+)\)", target.aggregation_types[0])
+        template_var_match = re.fullmatch(
+            r"\((?P<multitype>((min|max|avg)\|?)+)\)", target.aggregation_types[0]
+        )
         if template_var_match:
             target.aggregation_types = template_var_match.group("multitype").split("|")
         target.order_time_value = order_time_value
@@ -61,7 +64,9 @@ class Target:
             self.alias_type = Target.ALIAS
             self.alias_value = ",".join(target_string.split(",")[1:])[:-1]
             prefix_length = len("alias(")
-            suffix_length = len(self.alias_value) + 2  # remove alias string, closing bracket and separation comma
+            suffix_length = (
+                len(self.alias_value) + 2
+            )  # remove alias string, closing bracket and separation comma
         elif target_string.startswith("aliasByMetric("):
             self.alias_type = Target.METRIC
             prefix_length = len("aliasByMetric(")
@@ -81,7 +86,9 @@ class Target:
             self.alias_value = ",".join(target_string.split(",")[1:-1])
             self.moving_average_interval = int(target_string.split(",")[-1][:-1])
             prefix_length = len("movingAverageWithAlias(")
-            suffix_length = len(",".join(target_string.split(",")[1:])[:-1]) + 2  # remove alias string, separation comma, moving average window, closing bracket and separation comma
+            suffix_length = (
+                len(",".join(target_string.split(",")[1:])[:-1]) + 2
+            )  # remove alias string, separation comma, moving average window, closing bracket and separation comma
         if prefix_length:
             extracted_target_string = target_string[prefix_length:-suffix_length]
         return extracted_target_string
@@ -95,7 +102,10 @@ class Target:
             rep_dict = {
                 "target": (self.get_aliased_target(aggregation_type=target_type)),
                 "datapoints": [],
-                "time_measurements": {"db": response.request_duration, "http": str(time_measurement)}
+                "time_measurements": {
+                    "db": response.request_duration,
+                    "http": str(time_measurement),
+                },
             }
 
             moving_interval_start = 0
@@ -104,7 +114,10 @@ class Target:
             for timeaggregate in response.aggregates(convert=True):
                 if timeaggregate.timestamp < self.start_time:
                     moving_interval_start += 1
-                if timeaggregate.timestamp >= self.start_time and timeaggregate.timestamp <= self.end_time:
+                if (
+                    timeaggregate.timestamp >= self.start_time
+                    and timeaggregate.timestamp <= self.end_time
+                ):
                     normal_interval_count += 1
                 if target_type == "min":
                     value = timeaggregate.minimum
@@ -119,14 +132,20 @@ class Target:
                     continue
 
                 if not self.order_time_value:
-                    dp.append((sanitize_number(value), timeaggregate.timestamp.posix_ms))
+                    dp.append(
+                        (sanitize_number(value), timeaggregate.timestamp.posix_ms)
+                    )
                 else:
-                    dp.append((timeaggregate.timestamp.posix_ms, sanitize_number(value)))
+                    dp.append(
+                        (timeaggregate.timestamp.posix_ms, sanitize_number(value))
+                    )
 
             rep_dict["datapoints"] = dp
 
             if self.moving_average_interval:
-                logger.debug(f"Moving average_start {moving_interval_start}, normal count {normal_interval_count}")
+                logger.debug(
+                    f"Moving average_start {moving_interval_start}, normal count {normal_interval_count}"
+                )
                 moving_interval_size_half = moving_interval_start
                 avg_datapoints = []
                 sum = 0
@@ -136,15 +155,22 @@ class Target:
                     value_index = 1
 
                 last_timed = 0
-                for i in range(0, len(rep_dict["datapoints"]) - moving_interval_size_half):
+                for i in range(
+                    0, len(rep_dict["datapoints"]) - moving_interval_size_half
+                ):
                     timestamp = dp[i][1 - value_index]
                     if timestamp <= last_timed:
-                        logger.warning(f"Current timestamp ({i}, {timestamp}) is <= last timestamp ({last_timed})")
+                        logger.warning(
+                            f"Current timestamp ({i}, {timestamp}) is <= last timestamp ({last_timed})"
+                        )
                     last_timed = timestamp
                     sum += dp[i + moving_interval_size_half][value_index]
                     if i >= moving_interval_size_half:
                         sum -= dp[i - moving_interval_size_half][value_index]
-                    if timestamp >= self.start_time.posix_ms and timestamp <= self.end_time.posix_ms:
+                    if (
+                        timestamp >= self.start_time.posix_ms
+                        and timestamp <= self.end_time.posix_ms
+                    ):
                         avg = sum / (moving_interval_size_half * 2 + 1)
                         if not self.order_time_value:
                             avg_datapoints.append((sanitize_number(avg), timestamp))
@@ -177,7 +203,9 @@ class Target:
                 return self.target.replace(".", "/")
         elif self.alias_type == Target.METRICDESC:
             if aggregation_type:
-                return "{}/{} ({})".format(self.target.replace(".", "/"), aggregation_type, self.alias_value)
+                return "{}/{} ({})".format(
+                    self.target.replace(".", "/"), aggregation_type, self.alias_value
+                )
             else:
                 return "{} ({})".format(self.target.replace(".", "/"), self.alias_value)
 
@@ -198,21 +226,38 @@ class Target:
         self.start_time = start_time
         self.end_time = end_time
         if self.moving_average_interval:
-            before_start_interval = Timedelta((self.moving_average_interval * 10 ** 6) // 2)
-            after_end_interval = Timedelta((self.moving_average_interval * 10 ** 6) - before_start_interval)
-        self.response = await app['history_client'].history_data_request(self.target, start_time - before_start_interval, end_time + after_end_interval, interval, timeout=5)
+            before_start_interval = Timedelta(
+                (self.moving_average_interval * 10 ** 6) // 2
+            )
+            after_end_interval = Timedelta(
+                (self.moving_average_interval * 10 ** 6) - before_start_interval
+            )
+        self.response = await app["history_client"].history_data_request(
+            self.target,
+            start_time - before_start_interval,
+            end_time + after_end_interval,
+            interval,
+            timeout=5,
+        )
         perf_end_time = time.perf_counter_ns()
-        self.time_delta_ns = (perf_end_time - perf_start_time)
+        self.time_delta_ns = perf_end_time - perf_start_time
 
     async def get_response(self, app, start_time, end_time, interval):
-        await asyncio.wait([self.pull_data(app, start_time, end_time, interval), self.pull_description(app)])
+        await asyncio.wait(
+            [
+                self.pull_data(app, start_time, end_time, interval),
+                self.pull_description(app),
+            ]
+        )
 
         if self.response is None or self.time_delta_ns is None:
             return []
         return self.convert_response(self.response, self.time_delta_ns)
 
     async def pull_metadata(self, app):
-        result = await app["history_client"].history_metric_metadata(selector=self.get_target_as_regex())
+        result = await app["history_client"].history_metric_metadata(
+            selector=self.get_target_as_regex()
+        )
         self.metadata = result.get(self.target, None)
 
     async def get_metadata(self, app):

@@ -16,9 +16,7 @@ async def query(request):
         resp = await get_history_data(request.app, req_json)
     except futures.TimeoutError:
         raise web.HTTPFound()
-    return web.json_response(
-        resp
-    )
+    return web.json_response(resp)
 
 
 async def search(request):
@@ -40,5 +38,11 @@ async def legacy_counter_data(request):
     data = request.query
     if not all([k in data for k in ["cntr", "start", "stop", "width"]]):
         raise web.HTTPBadRequest()
-    counter_data = await get_counter_data(request.app, data["cntr"], int(data["start"]), int(data["stop"]), int(data["width"]))
+    counter_data = await get_counter_data(
+        request.app,
+        data["cntr"],
+        int(data["start"]),
+        int(data["stop"]),
+        int(data["width"]),
+    )
     return web.json_response(counter_data)
