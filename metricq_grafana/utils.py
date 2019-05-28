@@ -229,8 +229,9 @@ class Target:
             before_start_interval = Timedelta(
                 (self.moving_average_interval * 10 ** 6) // 2
             )
-            after_end_interval = Timedelta(
-                (self.moving_average_interval * 10 ** 6) - before_start_interval
+            after_end_interval = (
+                Timedelta((self.moving_average_interval * 10 ** 6))
+                - before_start_interval
             )
         self.response = await app["history_client"].history_data_request(
             self.target,
