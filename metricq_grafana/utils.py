@@ -84,7 +84,9 @@ class Target:
         elif target_string.startswith("movingAverageWithAlias("):
             self.alias_type = Target.ALIAS
             self.alias_value = ",".join(target_string.split(",")[1:-1])
-            self.moving_average_interval = int(target_string.split(",")[-1][:-1])
+            self.moving_average_interval = Timedelta.from_string(
+                target_string.split(",")[-1][:-1]
+            )
             prefix_length = len("movingAverageWithAlias(")
             suffix_length = (
                 len(",".join(target_string.split(",")[1:])[:-1]) + 2
@@ -101,30 +103,53 @@ class Target:
         for target_type in self.aggregation_types:
             rep_dict = {
                 "target": (self.get_aliased_target(aggregation_type=target_type)),
-                "datapoints": [],
                 "time_measurements": {
                     "db": response.request_duration,
                     "http": str(time_measurement),
                 },
             }
 
-            moving_interval_start = 0
-            normal_interval_count = 0
-            dp = rep_dict["datapoints"]
-            for timeaggregate in response.aggregates(convert=True):
-                if timeaggregate.timestamp < self.start_time:
-                    moving_interval_start += 1
-                if (
-                    timeaggregate.timestamp >= self.start_time
-                    and timeaggregate.timestamp <= self.end_time
-                ):
-                    normal_interval_count += 1
-                if target_type == "min":
-                    value = timeaggregate.minimum
-                elif target_type == "max":
-                    value = timeaggregate.maximum
+            dp = []
+
+            response_aggregates = response.aggregates(convert=True)
+
+            if self.moving_average_interval:
+                ma_integral = 0
+                ma_active_time = 0
+                ma_begin_index = 0
+                response_aggregates = list(response_aggregates)
+
+            for timeaggregate in response_aggregates:
+                if self.moving_average_interval:
+                    ma_integral += timeaggregate.integral
+                    ma_active_time += timeaggregate.active_time
+
+                    while response_aggregates[ma_begin_index].timestamp < (
+                        timeaggregate.timestamp - self.moving_average_interval
+                    ):
+                        ma_integral -= response_aggregates[ma_begin_index].integral
+                        ma_active_time -= response_aggregates[
+                            ma_begin_index
+                        ].active_time
+                        ma_begin_index += 1
+
+                    timestamp = (
+                        response_aggregates[ma_begin_index].timestamp
+                        + (
+                            timeaggregate.timestamp
+                            - response_aggregates[ma_begin_index].timestamp
+                        )
+                        / 2
+                    )
+                    value = ma_integral / ma_active_time
                 else:
-                    value = timeaggregate.mean
+                    timestamp = timeaggregate.timestamp
+                    if target_type == "min":
+                        value = timeaggregate.minimum
+                    elif target_type == "max":
+                        value = timeaggregate.maximum
+                    else:
+                        value = timeaggregate.mean
 
                 if timeaggregate.count == 0 and not self.moving_average_interval:
                     # Don't insert empty intervals with no data to avoid confusing visualization
@@ -132,58 +157,11 @@ class Target:
                     continue
 
                 if not self.order_time_value:
-                    dp.append(
-                        (sanitize_number(value), timeaggregate.timestamp.posix_ms)
-                    )
+                    dp.append((sanitize_number(value), timestamp.posix_ms))
                 else:
-                    dp.append(
-                        (timeaggregate.timestamp.posix_ms, sanitize_number(value))
-                    )
+                    dp.append((timestamp.posix_ms, sanitize_number(value)))
 
             rep_dict["datapoints"] = dp
-
-            if self.moving_average_interval:
-                logger.debug(
-                    f"Moving average_start {moving_interval_start}, normal count {normal_interval_count}"
-                )
-                moving_interval_size_half = moving_interval_start
-                avg_datapoints = []
-                sum = 0
-                if not self.order_time_value:
-                    value_index = 0
-                else:
-                    value_index = 1
-
-                last_timed = 0
-                for i in range(
-                    0, len(rep_dict["datapoints"]) - moving_interval_size_half
-                ):
-                    timestamp = dp[i][1 - value_index]
-                    if timestamp <= last_timed:
-                        logger.warning(
-                            f"Current timestamp ({i}, {timestamp}) is <= last timestamp ({last_timed})"
-                        )
-                    last_timed = timestamp
-                    sum += dp[i + moving_interval_size_half][value_index]
-                    if i >= moving_interval_size_half:
-                        sum -= dp[i - moving_interval_size_half][value_index]
-                    if (
-                        timestamp >= self.start_time.posix_ms
-                        and timestamp <= self.end_time.posix_ms
-                    ):
-                        avg = sum / (moving_interval_size_half * 2 + 1)
-                        if not self.order_time_value:
-                            avg_datapoints.append((sanitize_number(avg), timestamp))
-                        else:
-                            avg_datapoints.append((timestamp, sanitize_number(avg)))
-                logger.debug(f"Avg {len(avg_datapoints)}")
-                last_timed = self.start_time.posix_ms
-                for i, (_, timed) in enumerate(avg_datapoints):
-                    if timed <= last_timed:
-                        logger.warning(f"Current timestamp ({i}) is <= last timestamp")
-                    last_timed = timed
-                rep_dict["datapoints"] = avg_datapoints
-
             results.append(rep_dict)
 
         return results
@@ -226,17 +204,11 @@ class Target:
         self.start_time = start_time
         self.end_time = end_time
         if self.moving_average_interval:
-            before_start_interval = Timedelta(
-                (self.moving_average_interval * 10 ** 6) // 2
-            )
-            after_end_interval = (
-                Timedelta((self.moving_average_interval * 10 ** 6))
-                - before_start_interval
-            )
+            half_interval = self.moving_average_interval / 2
         self.response = await app["history_client"].history_data_request(
             self.target,
-            start_time - before_start_interval,
-            end_time + after_end_interval,
+            start_time - half_interval,
+            end_time + half_interval,
             interval,
             timeout=5,
         )
