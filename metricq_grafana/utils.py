@@ -199,18 +199,13 @@ class Target:
 
     async def pull_data(self, app, start_time, end_time, interval):
         perf_start_time = time.perf_counter_ns()
-        before_start_interval = Timedelta(0)
-        after_end_interval = Timedelta(0)
         self.start_time = start_time
         self.end_time = end_time
         if self.moving_average_interval:
-            half_interval = self.moving_average_interval / 2
+            start_time -= self.moving_average_interval / 2
+            end_time += self.moving_average_interval / 2
         self.response = await app["history_client"].history_data_request(
-            self.target,
-            start_time - half_interval,
-            end_time + half_interval,
-            interval,
-            timeout=5,
+            self.target, start_time, end_time, interval, timeout=5
         )
         perf_end_time = time.perf_counter_ns()
         self.time_delta_ns = perf_end_time - perf_start_time
