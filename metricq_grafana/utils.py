@@ -65,7 +65,7 @@ class Target:
         target.alias_type = target_dict.get("alias_type", None)
         target.alias_value = target_dict.get("alias_value", "")
         target.aggregation_types = target_dict.get("aggregates", ["avg"])
-        target.moving_average_interval = target_dict.get("sma_window", 0)
+        target.moving_average_interval = int(target_dict.get("sma_window", "0"))
         target.order_time_value = order_time_value
         return target
 
