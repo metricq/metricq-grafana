@@ -16,7 +16,13 @@ timer = time.monotonic
 
 async def get_history_data(app, request):
     time_begin = timer()
-    targets = [Target.extract_from_string(x["target"]) for x in request["targets"]]
+    targets = []
+    for target_dict in request["targets"]:
+        if "target" in target_dict:
+            targets.append(Target.extract_from_string(target_dict["target"]))
+        else:
+            targets.append(Target.extract_from_dict(target_dict))
+
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
     interval = Timedelta(request["intervalMs"] * 10 ** 6)

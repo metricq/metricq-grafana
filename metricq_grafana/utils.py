@@ -20,7 +20,7 @@ def sanitize_number(value):
 class Target:
 
     # Target types
-    ALIAS = "alias"
+    ALIAS = "custom"
     METRIC = "metric"
     DESC = "description"
     METRICDESC = "metricAndDescription"
@@ -53,6 +53,19 @@ class Target:
         )
         if template_var_match:
             target.aggregation_types = template_var_match.group("multitype").split("|")
+        if target.moving_average_interval:
+            target.aggregation_types = ["sma"]
+        target.order_time_value = order_time_value
+        return target
+
+    @classmethod
+    def extract_from_dict(cls, target_dict: dict, order_time_value: bool = False):
+        target = cls()
+        target.target = target_dict["target_metric"]
+        target.alias_type = target_dict.get("alias_type", None)
+        target.alias_value = target_dict.get("alias_value", "")
+        target.aggregation_types = target_dict.get("aggregates", ["avg"])
+        target.moving_average_interval = target_dict.get("sma_window", 0)
         target.order_time_value = order_time_value
         return target
 
@@ -113,14 +126,14 @@ class Target:
 
             response_aggregates = response.aggregates(convert=True)
 
-            if self.moving_average_interval:
+            if target_type == "sma":
                 ma_integral = 0
                 ma_active_time = 0
                 ma_begin_index = 0
                 response_aggregates = list(response_aggregates)
 
             for timeaggregate in response_aggregates:
-                if self.moving_average_interval:
+                if target_type == "sma":
                     ma_integral += timeaggregate.integral
                     ma_active_time += timeaggregate.active_time
 
@@ -148,10 +161,12 @@ class Target:
                         value = timeaggregate.minimum
                     elif target_type == "max":
                         value = timeaggregate.maximum
+                    elif target_type == "count":
+                        value = timeaggregate.count
                     else:
                         value = timeaggregate.mean
 
-                if timeaggregate.count == 0 and not self.moving_average_interval:
+                if timeaggregate.count == 0 and target_type != "sma":
                     # Don't insert empty intervals with no data to avoid confusing visualization
                     # However, this would complicate moving average computation, so we retain them in this case
                     continue
