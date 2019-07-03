@@ -71,7 +71,7 @@ class Target:
                 target_dict.get("sma_window", "0h")
             )
         except TypeError:
-            target.moving_average_interval = Timedelta()
+            target.moving_average_interval = Timedelta(0)
 
         target.order_time_value = order_time_value
         return target
