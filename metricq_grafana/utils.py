@@ -228,11 +228,9 @@ class Target:
         self.time_delta_ns = perf_end_time - perf_start_time
 
     async def get_response(self, app, start_time, end_time, interval):
-        await asyncio.wait(
-            [
-                self.pull_data(app, start_time, end_time, interval),
-                self.pull_description(app),
-            ]
+        await asyncio.gather(
+            self.pull_data(app, start_time, end_time, interval),
+            self.pull_description(app),
         )
 
         if self.response is None or self.time_delta_ns is None:
