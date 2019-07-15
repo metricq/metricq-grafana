@@ -115,9 +115,6 @@ class Target:
             extracted_target_string = target_string[prefix_length:-suffix_length]
         return extracted_target_string
 
-    def get_target_as_regex(self):
-        return "^{}$".format(re.escape(self.target))
-
     def convert_response(self, response: HistoryResponse, time_measurement):
         results = []
         for target_type in self.aggregation_types:
@@ -244,7 +241,7 @@ class Target:
 
     async def pull_metadata(self, app):
         result = await app["history_client"].history_metric_metadata(
-            selector=self.get_target_as_regex()
+            selector=[self.target]
         )
         self.metadata = result.get(self.target, None)
 
