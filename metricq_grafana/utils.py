@@ -117,6 +117,7 @@ class Target:
 
     def convert_response(self, response: HistoryResponse, time_measurement):
         results = []
+        response_aggregates = response.aggregates(convert=True)
         for target_type in self.aggregation_types:
             rep_dict = {
                 "target": (self.get_aliased_target(aggregation_type=target_type)),
@@ -124,45 +125,107 @@ class Target:
                     "db": response.request_duration,
                     "http": str(time_measurement),
                 },
+                "datapoints": [],
             }
 
-            dp = []
+            response_aggregates = list(response_aggregates)
+            if len(response_aggregates) == 0:
+                results.append(rep_dict)
+                continue
 
-            response_aggregates = response.aggregates(convert=True)
+            dp = []
 
             if target_type == "sma":
                 ma_integral = 0
                 ma_active_time = 0
                 ma_begin_index = 0
-                response_aggregates = list(response_aggregates)
+                ma_begin_time = response_aggregates[0].time
+                ma_end_index = 0
+                ma_end_time = response_aggregates[0].time
 
-            for timeaggregate in response_aggregates:
-                if target_type == "sma":
-                    ma_integral += timeaggregate.integral
-                    ma_active_time += timeaggregate.active_time
-
-                    while response_aggregates[ma_begin_index].timestamp < (
-                        timeaggregate.timestamp - self.moving_average_interval
-                    ):
-                        ma_integral -= response_aggregates[ma_begin_index].integral
-                        ma_active_time -= response_aggregates[
-                            ma_begin_index
-                        ].active_time
-                        ma_begin_index += 1
-
-                    timestamp = (
-                        response_aggregates[ma_begin_index].timestamp
-                        + (
-                            timeaggregate.timestamp
-                            - response_aggregates[ma_begin_index].timestamp
-                        )
-                        / 2
+                # we assume LAST semantic, but this should not matter for equidistant intervals
+                interval_durations = [0] + [
+                    current_ta.timestamp - previous_ta.timestamp
+                    for previous_ta, current_ta in zip(
+                        response_aggregates, response_aggregates[1:]
                     )
+                ]
+
+                for timeaggregate, current_interval_duration in zip(
+                    response_aggregates, interval_durations
+                ):
+                    # The moving average window is symmetric around the current *interval* - not the current point
+                    # How much time is covered by the current interval width and how much is on both sides "outside"
+                    assert current_interval_duration >= 0
+                    outside_time = (
+                        self.moving_average_interval - current_interval_duration
+                    )
+                    # If the current interval is wider than the target moving average window, just use the current one
+                    outside_time = max(0, outside_time)
+                    seek_begin_time = (
+                        timeaggregate.time
+                        - current_interval_duration
+                        - outside_time / 2
+                    )
+                    seek_end_time = timeaggregate.time + outside_time / 2
+
+                    # TODO unify this code
+                    # Move left part of the window
+                    while ma_begin_time < seek_begin_time:
+                        next_step_time = min(
+                            response_aggregates[ma_begin_index].time, seek_begin_time
+                        )
+                        step_duration = next_step_time - ma_begin_time
+                        # scale can be 0 (everything is nop),
+                        # 1 (full interval needs to be removed), or something in between
+                        scale = step_duration / interval_durations[ma_begin_index]
+                        ma_active_time -= (
+                            timeaggregate[ma_begin_index].active_time * scale
+                        )
+                        ma_integral -= timeaggregate[ma_begin_index].integral * scale
+
+                        ma_begin_time = next_step_time
+                        assert ma_begin_time <= response_aggregates[ma_begin_index].time
+                        if ma_begin_time == response_aggregates[ma_begin_index].time:
+                            # Need to move to the next interval
+                            ma_begin_index += 1
+
+                    # Move right part of the window
+                    while ma_end_time < seek_end_time and ma_end_index < len(
+                        response_aggregates
+                    ):
+                        next_step_time = min(
+                            response_aggregates[ma_end_index].time, seek_end_time
+                        )
+                        step_duration = next_step_time - ma_end_time
+                        # scale can be 0 (everything is nop),
+                        # 1 (full interval needs to be removed), or something in between
+                        scale = step_duration / interval_durations[ma_end_index]
+                        ma_active_time += (
+                            timeaggregate[ma_end_index].active_time * scale
+                        )
+                        ma_integral += timeaggregate[ma_end_index].integral * scale
+
+                        ma_end_time = next_step_time
+                        assert ma_end_time <= response_aggregates[ma_end_index].time
+                        if ma_end_time == response_aggregates[ma_end_index].time:
+                            # Need to move to the next interval
+                            ma_end_index += 1
+
+                    if seek_begin_time != ma_begin_time or seek_end_time != ma_end_time:
+                        # Interval window not complete
+                        continue
                     if ma_active_time == 0:
-                        # can happen... no use in generating a value
                         continue
                     value = ma_integral / ma_active_time
-                else:
+
+                    if not self.order_time_value:
+                        dp.append((sanitize_number(value), timestamp.posix_ms))
+                    else:
+                        dp.append((timestamp.posix_ms, sanitize_number(value)))
+
+            if target_type != "sma":
+                for timeaggregate in response_aggregates:
                     timestamp = timeaggregate.timestamp
                     if target_type == "min":
                         value = timeaggregate.minimum
@@ -173,15 +236,15 @@ class Target:
                     else:
                         value = timeaggregate.mean
 
-                if timeaggregate.count == 0 and target_type != "sma":
-                    # Don't insert empty intervals with no data to avoid confusing visualization
-                    # However, this would complicate moving average computation, so we retain them in this case
-                    continue
+                    if timeaggregate.count == 0:
+                        # Don't insert empty intervals with no data to avoid confusing visualization
+                        # However, this would complicate moving average computation, so we retain them in this case
+                        continue
 
-                if not self.order_time_value:
-                    dp.append((sanitize_number(value), timestamp.posix_ms))
-                else:
-                    dp.append((timestamp.posix_ms, sanitize_number(value)))
+                    if not self.order_time_value:
+                        dp.append((sanitize_number(value), timestamp.posix_ms))
+                    else:
+                        dp.append((timestamp.posix_ms, sanitize_number(value)))
 
             rep_dict["datapoints"] = dp
             results.append(rep_dict)
