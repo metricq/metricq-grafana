@@ -233,7 +233,9 @@ class Target:
                         continue
                     if ma_active_time == 0:
                         continue
+
                     value = ma_integral / ma_active_time
+                    timestamp = timeaggregate.timestamp
 
                     if not self.order_time_value:
                         dp.append((sanitize_number(value), timestamp.posix_ms))
