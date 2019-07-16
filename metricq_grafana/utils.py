@@ -144,12 +144,15 @@ class Target:
                 ma_end_time = response_aggregates[0].timestamp
 
                 # we assume LAST semantic, but this should not matter for equidistant intervals
-                interval_durations = [Timedelta(0)] + [
+                interval_durations = [
                     current_ta.timestamp - previous_ta.timestamp
                     for previous_ta, current_ta in zip(
                         response_aggregates, response_aggregates[1:]
                     )
                 ]
+                # We can't handle this now...
+                assert min(interval_durations) > Timedelta(0)
+                interval_durations = [Timedelta(0)] + interval_durations
 
                 for timeaggregate, current_interval_duration in zip(
                     response_aggregates, interval_durations
@@ -181,9 +184,11 @@ class Target:
                         # 1 (full interval needs to be removed), or something in between
                         scale = step_duration.ns / interval_durations[ma_begin_index].ns
                         ma_active_time -= (
-                            timeaggregate[ma_begin_index].active_time * scale
+                            response_aggregates[ma_begin_index].active_time * scale
                         )
-                        ma_integral -= timeaggregate[ma_begin_index].integral * scale
+                        ma_integral -= (
+                            response_aggregates[ma_begin_index].integral * scale
+                        )
 
                         ma_begin_time = next_step_time
                         assert (
@@ -209,9 +214,11 @@ class Target:
                         # 1 (full interval needs to be removed), or something in between
                         scale = step_duration.ns / interval_durations[ma_end_index].ns
                         ma_active_time += (
-                            timeaggregate[ma_end_index].active_time * scale
+                            response_aggregates[ma_end_index].active_time * scale
                         )
-                        ma_integral += timeaggregate[ma_end_index].integral * scale
+                        ma_integral += (
+                            response_aggregates[ma_end_index].integral * scale
+                        )
 
                         ma_end_time = next_step_time
                         assert (
