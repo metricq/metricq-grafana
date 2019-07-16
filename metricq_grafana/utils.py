@@ -144,7 +144,7 @@ class Target:
                 ma_end_time = response_aggregates[0].timestamp
 
                 # we assume LAST semantic, but this should not matter for equidistant intervals
-                interval_durations = [0] + [
+                interval_durations = [Timedelta(0)] + [
                     current_ta.timestamp - previous_ta.timestamp
                     for previous_ta, current_ta in zip(
                         response_aggregates, response_aggregates[1:]
@@ -156,7 +156,7 @@ class Target:
                 ):
                     # The moving average window is symmetric around the current *interval* - not the current point
                     # How much time is covered by the current interval width and how much is on both sides "outside"
-                    assert current_interval_duration >= 0
+                    assert current_interval_duration >= Timedelta(0)
                     outside_time = (
                         self.moving_average_interval - current_interval_duration
                     )
