@@ -179,7 +179,7 @@ class Target:
                         step_duration = next_step_time - ma_begin_time
                         # scale can be 0 (everything is nop),
                         # 1 (full interval needs to be removed), or something in between
-                        scale = step_duration / interval_durations[ma_begin_index]
+                        scale = step_duration.ns / interval_durations[ma_begin_index].ns
                         ma_active_time -= (
                             timeaggregate[ma_begin_index].active_time * scale
                         )
@@ -207,7 +207,7 @@ class Target:
                         step_duration = next_step_time - ma_end_time
                         # scale can be 0 (everything is nop),
                         # 1 (full interval needs to be removed), or something in between
-                        scale = step_duration / interval_durations[ma_end_index]
+                        scale = step_duration.ns / interval_durations[ma_end_index].ns
                         ma_active_time += (
                             timeaggregate[ma_end_index].active_time * scale
                         )
