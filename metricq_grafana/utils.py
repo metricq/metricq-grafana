@@ -158,6 +158,9 @@ class Target:
                         )
                         / 2
                     )
+                    if ma_active_time == 0:
+                        # can happen... no use in generating a value
+                        continue
                     value = ma_integral / ma_active_time
                 else:
                     timestamp = timeaggregate.timestamp
