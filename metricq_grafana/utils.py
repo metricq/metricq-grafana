@@ -150,7 +150,7 @@ class Target:
                         response_aggregates, response_aggregates[1:]
                     )
                 ]
-                # We can't handle this now...
+                # We need strong monotony. DB-HTA guarantees it currently
                 assert min(interval_durations) > Timedelta(0)
                 interval_durations = [Timedelta(0)] + interval_durations
 
@@ -172,7 +172,7 @@ class Target:
                     )
                     seek_end_time = timeaggregate.timestamp + outside_duration / 2
 
-                    # TODO unify this code
+                    # TODO unify these two loops
                     # Move left part of the window
                     while ma_begin_time < seek_begin_time:
                         next_step_time = min(
