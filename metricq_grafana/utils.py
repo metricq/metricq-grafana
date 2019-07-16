@@ -138,9 +138,9 @@ class Target:
             if target_type == "sma":
                 ma_integral = 0
                 ma_active_time = 0
-                ma_begin_index = 0
+                ma_begin_index = 1
                 ma_begin_time = response_aggregates[0].timestamp
-                ma_end_index = 0
+                ma_end_index = 1
                 ma_end_time = response_aggregates[0].timestamp
 
                 # we assume LAST semantic, but this should not matter for equidistant intervals
