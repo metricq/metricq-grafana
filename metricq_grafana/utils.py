@@ -163,17 +163,18 @@ class Target:
                     # If the current interval is wider than the target moving average window, just use the current one
                     outside_time = max(0, outside_time)
                     seek_begin_time = (
-                        timeaggregate.time
+                        timeaggregate.timestamp
                         - current_interval_duration
                         - outside_time / 2
                     )
-                    seek_end_time = timeaggregate.time + outside_time / 2
+                    seek_end_time = timeaggregate.timestamp + outside_time / 2
 
                     # TODO unify this code
                     # Move left part of the window
                     while ma_begin_time < seek_begin_time:
                         next_step_time = min(
-                            response_aggregates[ma_begin_index].time, seek_begin_time
+                            response_aggregates[ma_begin_index].timestamp,
+                            seek_begin_time,
                         )
                         step_duration = next_step_time - ma_begin_time
                         # scale can be 0 (everything is nop),
@@ -185,8 +186,14 @@ class Target:
                         ma_integral -= timeaggregate[ma_begin_index].integral * scale
 
                         ma_begin_time = next_step_time
-                        assert ma_begin_time <= response_aggregates[ma_begin_index].time
-                        if ma_begin_time == response_aggregates[ma_begin_index].time:
+                        assert (
+                            ma_begin_time
+                            <= response_aggregates[ma_begin_index].timestamp
+                        )
+                        if (
+                            ma_begin_time
+                            == response_aggregates[ma_begin_index].timestamp
+                        ):
                             # Need to move to the next interval
                             ma_begin_index += 1
 
@@ -195,7 +202,7 @@ class Target:
                         response_aggregates
                     ):
                         next_step_time = min(
-                            response_aggregates[ma_end_index].time, seek_end_time
+                            response_aggregates[ma_end_index].timestamp, seek_end_time
                         )
                         step_duration = next_step_time - ma_end_time
                         # scale can be 0 (everything is nop),
@@ -207,8 +214,10 @@ class Target:
                         ma_integral += timeaggregate[ma_end_index].integral * scale
 
                         ma_end_time = next_step_time
-                        assert ma_end_time <= response_aggregates[ma_end_index].time
-                        if ma_end_time == response_aggregates[ma_end_index].time:
+                        assert (
+                            ma_end_time <= response_aggregates[ma_end_index].timestamp
+                        )
+                        if ma_end_time == response_aggregates[ma_end_index].timestamp:
                             # Need to move to the next interval
                             ma_end_index += 1
 
