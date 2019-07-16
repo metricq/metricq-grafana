@@ -157,17 +157,17 @@ class Target:
                     # The moving average window is symmetric around the current *interval* - not the current point
                     # How much time is covered by the current interval width and how much is on both sides "outside"
                     assert current_interval_duration >= Timedelta(0)
-                    outside_time = (
+                    outside_duration = (
                         self.moving_average_interval - current_interval_duration
                     )
                     # If the current interval is wider than the target moving average window, just use the current one
-                    outside_time = max(0, outside_time)
+                    outside_duration = max(Timedelta(0), outside_duration)
                     seek_begin_time = (
                         timeaggregate.timestamp
                         - current_interval_duration
-                        - outside_time / 2
+                        - outside_duration / 2
                     )
-                    seek_end_time = timeaggregate.timestamp + outside_time / 2
+                    seek_end_time = timeaggregate.timestamp + outside_duration / 2
 
                     # TODO unify this code
                     # Move left part of the window
