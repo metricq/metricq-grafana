@@ -21,9 +21,17 @@ async def query(request):
 
 
 async def search(request):
+    response_without_aggregation_type = False
+    if "woaggtype" in request.query:
+        response_without_aggregation_type = request.query["woaggtype"]
+
     search_query = (await request.json())["target"]
     logger.debug("Search query: {}", search_query)
-    metric_list = await get_metric_list(request.app, search_query)
+    metric_list = await get_metric_list(
+        request.app,
+        search_query,
+        without_aggregation_type=response_without_aggregation_type,
+    )
     return web.json_response(metric_list)
 
 

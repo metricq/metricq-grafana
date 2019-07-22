@@ -39,16 +39,19 @@ async def get_history_data(app, request):
     return rv
 
 
-async def get_metric_list(app, search_query):
+async def get_metric_list(app, search_query, without_aggregation_type=False):
     time_begin = timer()
     selector = "^(.+\\.)?{}.*$".format(re.escape(search_query))
     result = await app["history_client"].get_metrics(selector=selector, historic=True)
     if result:
-        lists = [
-            ["{}/{}".format(metric, type) for type in ["min", "max", "avg"]]
-            for metric in result
-        ]
-        rv = sorted([x for t in zip(*lists) for x in t])
+        if without_aggregation_type:
+            rv = sorted(result)
+        else:
+            lists = [
+                ["{}/{}".format(metric, type) for type in ["min", "max", "avg"]]
+                for metric in result
+            ]
+            rv = sorted([x for t in zip(*lists) for x in t])
     else:
         rv = []
     logger.info(
