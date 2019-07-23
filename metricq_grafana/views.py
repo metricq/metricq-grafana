@@ -21,7 +21,8 @@ async def query(request):
 
 
 async def search(request):
-    response_without_aggregation_type = False
+    # TODO REMOVE THIS ABOMINATION
+    response_without_aggregation_type = True
     if "woaggtype" in request.query:
         response_without_aggregation_type = request.query["woaggtype"]
 
