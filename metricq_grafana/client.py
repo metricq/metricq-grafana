@@ -16,7 +16,12 @@ class Client(HistoryClient):
         metadata: bool = True,
         historic: Optional[bool] = None,
         timeout: Optional[float] = None,
+        **kwargs,
     ) -> Union[Sequence[str], Sequence[dict]]:
         return await super().get_metrics(
-            selector=selector, metadata=metadata, historic=historic, timeout=timeout
+            selector=selector,
+            metadata=metadata,
+            historic=historic,
+            timeout=timeout,
+            **kwargs,
         )
