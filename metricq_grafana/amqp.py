@@ -41,8 +41,9 @@ async def get_history_data(app, request):
 
 async def get_metric_list(app, search_query, without_aggregation_type=False):
     time_begin = timer()
-    selector = "^(.+\\.)?{}.*$".format(re.escape(search_query))
-    result = await app["history_client"].get_metrics(selector=selector, historic=True)
+    result = await app["history_client"].get_metrics(
+        prefix=search_query, historic=True, limit=100
+    )
     if result:
         if without_aggregation_type:
             rv = sorted(result)
