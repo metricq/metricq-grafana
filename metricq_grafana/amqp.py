@@ -43,7 +43,7 @@ async def get_metric_list(app, search_query, without_aggregation_type=False):
     time_begin = timer()
     # TODO re-add check for historic metrics
     result = await app["history_client"].get_metrics(
-        prefix=search_query, metadata=False, imit=100
+        prefix=search_query, metadata=False, limit=100
     )
     if result:
         if without_aggregation_type:
