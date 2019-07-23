@@ -2,7 +2,6 @@
 from asyncio import futures
 
 from aiohttp import web
-
 from metricq import get_logger
 
 from .amqp import get_counter_data, get_counter_list, get_history_data, get_metric_list
@@ -16,7 +15,8 @@ async def query(request):
     try:
         resp = await get_history_data(request.app, req_json)
     except futures.TimeoutError:
-        raise web.HTTPFound()
+        # Noone responds means not found
+        raise web.HTTPNotFound()
     return web.json_response(resp)
 
 
