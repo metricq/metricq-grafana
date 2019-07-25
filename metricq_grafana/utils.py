@@ -300,7 +300,7 @@ class Target:
             start_time -= self.moving_average_interval / 2
             end_time += self.moving_average_interval / 2
         data = await app["history_client"].history_data_request(
-            self.target, start_time, end_time, interval, timeout=5
+            self.target, start_time, end_time, interval, timeout=30
         )
         perf_end_time = time.perf_counter_ns()
         return data, perf_end_time - perf_start_time
