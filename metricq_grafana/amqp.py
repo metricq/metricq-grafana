@@ -25,7 +25,7 @@ async def get_history_data(app, request):
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
-    interval = Timedelta(request["intervalMs"] * 10 ** 6)
+    interval = Timedelta.from_ms(request["intervalMs"])
     results = await asyncio.gather(
         *[
             target.get_response(app, start_time, end_time, interval)
