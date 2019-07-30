@@ -295,28 +295,29 @@ class Target:
         return None
 
     async def get_data(self, app, start_time, end_time, interval):
-        perf_start_time = time.perf_counter_ns()
+        perf_begin_ns = time.perf_counter_ns()
         if self.moving_average_interval:
             start_time -= self.moving_average_interval / 2
             end_time += self.moving_average_interval / 2
         data = await app["history_client"].history_data_request(
             self.target, start_time, end_time, interval, timeout=30
         )
-        perf_end_time = time.perf_counter_ns()
-        return data, perf_end_time - perf_start_time
+        perf_end_ns = time.perf_counter_ns()
+        return data, (perf_end_ns - perf_begin_ns) / 1e9
 
     async def get_response(self, app, start_time, end_time, interval):
-        ((data, time_delta_ns), description) = await asyncio.gather(
-            self.get_data(app, start_time, end_time, interval),
-            self.get_description(app),
-        )
-
         if self.alias_type in (Target.DESC, Target.METRICDESC):
+            ((data, time_delta_ns), description) = await asyncio.gather(
+                self.get_data(app, start_time, end_time, interval),
+                self.get_description(app),
+            )
             self.alias_value = description
+        else:
+            data, time_delta_ns = self.get_data(app, start_time, end_time, interval)
 
         if data is None or time_delta_ns is None:
             return []
-        return self.convert_response(data, float(time_delta_ns) / 1e9)
+        return self.convert_response(data, time_delta_ns)
 
     async def pull_metadata(self, app):
         result = await app["history_client"].history_metric_metadata(
