@@ -313,7 +313,9 @@ class Target:
             )
             self.alias_value = description
         else:
-            data, time_delta_ns = self.get_data(app, start_time, end_time, interval)
+            data, time_delta_ns = await self.get_data(
+                app, start_time, end_time, interval
+            )
 
         if data is None or time_delta_ns is None:
             return []
