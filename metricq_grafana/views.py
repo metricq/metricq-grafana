@@ -15,14 +15,20 @@ async def query(request):
     logger.debug("Query request data: {}", req_json)
     try:
         perf_begin_ns = time.perf_counter_ns()
+        perf_begin_process_ns = time.process_time_ns()
         resp = await get_history_data(request.app, req_json)
         perf_end_ns = time.perf_counter_ns()
+        perf_end_process_ns = time.process_time_ns()
+        headers = {
+            "x-request-duration": str((perf_end_ns - perf_begin_ns) / 1e9),
+            "x-request-duration-cpu": str(
+                (perf_end_process_ns - perf_begin_process_ns) / 1e9
+            ),
+        }
     except futures.TimeoutError:
         # No one responds means not found
         raise web.HTTPNotFound()
-    return web.json_response(
-        resp, headers={"x-request-duration": str((perf_end_ns - perf_begin_ns) / 1e9)}
-    )
+    return web.json_response(resp, headers=headers)
 
 
 async def search(request):
