@@ -119,7 +119,7 @@ class Target:
                 "target": (self.get_aliased_target(aggregation_type=target_type)),
                 "time_measurements": {
                     "db": response.request_duration,
-                    "http": str(time_measurement),
+                    "http": time_measurement,
                 },
                 "datapoints": [],
             }
@@ -316,7 +316,7 @@ class Target:
 
         if data is None or time_delta_ns is None:
             return []
-        return self.convert_response(data, time_delta_ns)
+        return self.convert_response(data, float(time_delta_ns) / 1e9)
 
     async def pull_metadata(self, app):
         result = await app["history_client"].history_metric_metadata(
