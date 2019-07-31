@@ -3,13 +3,13 @@ import asyncio
 import logging
 import traceback
 
+import click
+
 import aio_pika
 import aiohttp_cors
-import click
 import click_completion
 import click_log
 from aiohttp import web
-
 from metricq import get_logger
 
 from .client import Client
@@ -75,10 +75,13 @@ def panic(loop, context):
 @click.argument("management-url", default="amqp://localhost/")
 @click.option("--token", default="metricq-grafana")
 @click.option("--management-exchange", default="metricq.management")
+@click.option("--debug/--no-debug", default=False)
 @click_log.simple_verbosity_option(logger)
-def runserver_cmd(management_url, token, management_exchange):
+def runserver_cmd(management_url, token, management_exchange, debug):
     loop = asyncio.get_event_loop()
-    loop.set_debug(True)
+    if debug:
+        logger.warn("Using loop debug - this is slow")
+        loop.set_debug(True)
     # loop.set_exception_handler(panic)
     app = create_app(loop, token, management_url, management_exchange)
     # logger.info("starting management loop")
