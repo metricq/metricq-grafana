@@ -21,9 +21,7 @@ class Target:
 
     # Target types
     ALIAS = "custom"
-    METRIC = "metric"
     DESC = "description"
-    METRICDESC = "metricAndDescription"
 
     def __init__(self):
         self.target = ""
@@ -231,20 +229,8 @@ class Target:
                 return "{}/{}".format(self.target, aggregation_type)
             else:
                 return self.target
-        if self.alias_type == Target.ALIAS or self.alias_type == Target.DESC:
+        else:
             return self.alias_value
-        elif self.alias_type == Target.METRIC:
-            if aggregation_type:
-                return "{}/{}".format(self.target.replace(".", "/"), aggregation_type)
-            else:
-                return self.target.replace(".", "/")
-        elif self.alias_type == Target.METRICDESC:
-            if aggregation_type:
-                return "{}/{} ({})".format(
-                    self.target.replace(".", "/"), aggregation_type, self.alias_value
-                )
-            else:
-                return "{} ({})".format(self.target.replace(".", "/"), self.alias_value)
 
     async def get_description(self, app):
         metadata = await self.get_metadata(app)
@@ -266,7 +252,7 @@ class Target:
         return data, (perf_end_ns - perf_begin_ns) / 1e9
 
     async def get_response(self, app, start_time, end_time, interval):
-        if self.alias_type in (Target.DESC, Target.METRICDESC):
+        if self.alias_type == Target.DESC:
             ((data, time_delta_ns), description) = await asyncio.gather(
                 self.get_data(app, start_time, end_time, interval),
                 self.get_description(app),
