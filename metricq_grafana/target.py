@@ -83,10 +83,10 @@ class Target:
 
     def _transform_data(self, function, response_aggregates):
         for timestamp, value in function.transform_data(response_aggregates):
-            if not self.order_time_value:
-                yield sanitize_number(value), timestamp.posix_ms
-            else:
+            if self.order_time_value:
                 yield timestamp.posix_ms, sanitize_number(value)
+            else:
+                yield sanitize_number(value), timestamp.posix_ms
 
     @property
     def _additional_interval(self):

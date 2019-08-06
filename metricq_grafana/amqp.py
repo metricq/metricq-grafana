@@ -22,8 +22,7 @@ async def get_history_data(app, request):
             Target(
                 target_dict["metric"],
                 target_dict.get("name", None),
-                parse_functions(target_dict),
-                False,
+                list(parse_functions(target_dict)),
             )
         )
 
