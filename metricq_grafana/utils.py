@@ -2,6 +2,7 @@ import asyncio
 import math
 import re
 import time
+from string import Template
 
 from metricq import get_logger
 from metricq.history_client import HistoryResponse
@@ -18,14 +19,8 @@ def sanitize_number(value):
 
 
 class Target:
-
-    # Target types
-    ALIAS = "custom"
-    DESC = "description"
-
     def __init__(self):
         self.target = ""
-        self.alias_type = None
         self.alias_value = ""
         self.aggregation_types = ["avg"]
         self.metadata = None
@@ -55,7 +50,6 @@ class Target:
     def extract_from_dict(cls, target_dict: dict, order_time_value: bool = False):
         target = cls()
         target.target = target_dict["target_metric"]
-        target.alias_type = target_dict.get("alias_type", None)
         target.alias_value = target_dict.get("alias_value", "")
         target.aggregation_types = target_dict.get("aggregates", ["avg"])
         if "sma" in target.aggregation_types:
@@ -224,21 +218,13 @@ class Target:
         return results
 
     def get_aliased_target(self, aggregation_type=None) -> str:
-        if not self.alias_type:
+        if not self.alias_value:
             if aggregation_type:
                 return "{}/{}".format(self.target, aggregation_type)
             else:
                 return self.target
         else:
-            return self.alias_value
-
-    async def get_description(self, app):
-        metadata = await self.get_metadata(app)
-        if self.target not in metadata:
-            return None
-        if "description" in metadata[self.target]:
-            return metadata[self.target]["description"]
-        return None
+            return Template(self.alias_value).safe_substitute(**self.metadata)
 
     async def get_data(self, app, start_time, end_time, interval):
         perf_begin_ns = time.perf_counter_ns()
@@ -252,12 +238,11 @@ class Target:
         return data, (perf_end_ns - perf_begin_ns) / 1e9
 
     async def get_response(self, app, start_time, end_time, interval):
-        if self.alias_type == Target.DESC:
-            ((data, time_delta_ns), description) = await asyncio.gather(
+        if self.alias_value:
+            ((data, time_delta_ns), _) = await asyncio.gather(
                 self.get_data(app, start_time, end_time, interval),
-                self.get_description(app),
+                self.get_metadata(app),
             )
-            self.alias_value = description
         else:
             data, time_delta_ns = await self.get_data(
                 app, start_time, end_time, interval
