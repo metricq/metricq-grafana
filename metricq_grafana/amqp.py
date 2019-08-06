@@ -8,7 +8,7 @@ import time
 from metricq import get_logger
 from metricq.types import Timedelta, Timestamp
 
-from .utils import Target
+from .target import Target
 from .functions import parse_function
 
 
