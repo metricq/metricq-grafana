@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from metricq.types import Timedelta
+
 
 def parse_functions(target_dict):
     for function in target_dict.get("functions", ["avg"]):
@@ -21,12 +23,15 @@ def parse_functions(target_dict):
 
 
 class Function(ABC):
+    def __init__(self):
+        self.interval = Timedelta(0)
+
     @abstractmethod
     def transform_data(self, response_aggregates):
         pass
 
 
-class AvgFunction(ABC):
+class AvgFunction(Function):
     def __str__(self):
         return "avg"
 
@@ -36,7 +41,7 @@ class AvgFunction(ABC):
                 yield timeaggregate.timestamp, timeaggregate.mean
 
 
-class MinFunction(ABC):
+class MinFunction(Function):
     def __str__(self):
         return "min"
 
@@ -46,7 +51,7 @@ class MinFunction(ABC):
                 yield timeaggregate.timestamp, timeaggregate.minimum
 
 
-class MaxFunction(ABC):
+class MaxFunction(Function):
     def __str__(self):
         return "max"
 
@@ -56,7 +61,7 @@ class MaxFunction(ABC):
                 yield timeaggregate.timestamp, timeaggregate.maximum
 
 
-class CountFunction(ABC):
+class CountFunction(Function):
     def __str__(self):
         return "count"
 
@@ -65,7 +70,7 @@ class CountFunction(ABC):
             yield timeaggregate.timestamp, timeaggregate.count
 
 
-class MovingAverageFunction(function):
+class MovingAverageFunction(Function):
     def __init__(self, interval):
         self.interval = interval
 
@@ -100,7 +105,7 @@ class MovingAverageFunction(function):
             # The moving average window is symmetric around the current *interval* - not the current point
             # How much time is covered by the current interval width and how much is on both sides "outside"
             assert current_interval_duration >= Timedelta(0)
-            outside_duration = self.moving_average_interval - current_interval_duration
+            outside_duration = self.interval - current_interval_duration
             # If the current interval is wider than the target moving average window, just use the current one
             outside_duration = max(Timedelta(0), outside_duration)
             seek_begin_time = (

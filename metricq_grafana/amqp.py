@@ -1,15 +1,13 @@
 import asyncio
-import datetime
 import functools
 import operator
-import re
 import time
 
 from metricq import get_logger
 from metricq.types import Timedelta, Timestamp
 
 from .target import Target
-from .functions import parse_function
+from .functions import parse_functions
 
 
 logger = get_logger(__name__)
@@ -25,7 +23,7 @@ async def get_history_data(app, request):
                 target_dict["metric"],
                 target_dict.get("name", None),
                 parse_functions(target_dict),
-                order_time_value,
+                False,
             )
         )
 

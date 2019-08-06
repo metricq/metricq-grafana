@@ -1,11 +1,13 @@
 import asyncio
-import re
 import time
 from string import Template
 
 from metricq import get_logger
 from metricq.history_client import HistoryResponse
-from metricq.types import Timedelta, Timestamp
+
+from .functions import AvgFunction
+from .utils import sanitize_number
+
 
 logger = get_logger(__name__)
 
@@ -29,7 +31,7 @@ class Target:
 
     async def get_response(self, app, start_time, end_time, interval):
         metadata = None
-        if self.alias_value:
+        if self.name:
             ((data, time_delta_ns), metadata) = await asyncio.gather(
                 self._get_data(app, start_time, end_time, interval),
                 self.get_metadata(app),
@@ -45,11 +47,11 @@ class Target:
 
     async def _get_data(self, app, start_time, end_time, interval):
         perf_begin_ns = time.perf_counter_ns()
-        if self.moving_average_interval:
-            start_time -= self.moving_average_interval / 2
-            end_time += self.moving_average_interval / 2
+        extension = self._additional_interval / 2
+        start_time -= extension
+        end_time += extension
         data = await app["history_client"].history_data_request(
-            self.target, start_time, end_time, interval, timeout=30
+            self.metric, start_time, end_time, interval, timeout=30
         )
         perf_end_ns = time.perf_counter_ns()
         return data, (perf_end_ns - perf_begin_ns) / 1e9
@@ -85,3 +87,7 @@ class Target:
                 yield sanitize_number(value), timestamp.posix_ms
             else:
                 yield timestamp.posix_ms, sanitize_number(value)
+
+    @property
+    def _additional_interval(self):
+        return max(function.interval for function in self.functions)
