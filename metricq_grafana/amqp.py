@@ -18,10 +18,7 @@ async def get_history_data(app, request):
     time_begin = timer()
     targets = []
     for target_dict in request["targets"]:
-        if "target" in target_dict:
-            targets.append(Target.extract_from_string(target_dict["target"]))
-        else:
-            targets.append(Target.extract_from_dict(target_dict))
+        targets.append(Target.extract_from_dict(target_dict))
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
@@ -39,20 +36,13 @@ async def get_history_data(app, request):
     return rv
 
 
-async def get_metric_list(app, search_query, without_aggregation_type=False):
+async def get_metric_list(app, search_query):
     time_begin = timer()
     result = await app["history_client"].get_metrics(
         infix=search_query, metadata=False, limit=100, historic=True
     )
     if result:
-        if without_aggregation_type:
-            rv = sorted(result)
-        else:
-            lists = [
-                ["{}/{}".format(metric, type) for type in ["min", "max", "avg"]]
-                for metric in result
-            ]
-            rv = sorted([x for t in zip(*lists) for x in t])
+        rv = sorted(result)
     else:
         rv = []
     logger.info(

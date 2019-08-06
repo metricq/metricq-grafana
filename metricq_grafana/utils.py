@@ -21,9 +21,7 @@ class Target:
 
     # Target types
     ALIAS = "custom"
-    METRIC = "metric"
     DESC = "description"
-    METRICDESC = "metricAndDescription"
 
     def __init__(self):
         self.target = ""
@@ -37,7 +35,6 @@ class Target:
     @classmethod
     def extract_from_string(cls, target_string: str, order_time_value: bool = False):
         target = cls()
-        target_string = target._extract_alias(target_string)
         target_split = target_string.split("/")
         if len(target_split) > 1:
             target.target = "/".join(target_split[:-1])
@@ -71,45 +68,6 @@ class Target:
 
         target.order_time_value = order_time_value
         return target
-
-    def _extract_alias(self, target_string) -> str:
-        extracted_target_string = target_string
-        prefix_length = None
-        suffix_length = 0
-        if target_string.startswith("alias("):
-            self.alias_type = Target.ALIAS
-            self.alias_value = ",".join(target_string.split(",")[1:])[:-1]
-            prefix_length = len("alias(")
-            suffix_length = (
-                len(self.alias_value) + 2
-            )  # remove alias string, closing bracket and separation comma
-        elif target_string.startswith("aliasByMetric("):
-            self.alias_type = Target.METRIC
-            prefix_length = len("aliasByMetric(")
-            suffix_length = 1
-        elif target_string.startswith("aliasByDescription("):
-            self.alias_type = Target.DESC
-            self.alias_value = "No description found"
-            prefix_length = len("aliasByDescription(")
-            suffix_length = 1
-        elif target_string.startswith("aliasByMetricAndDescription("):
-            self.alias_type = Target.METRICDESC
-            self.alias_value = "No description found"
-            prefix_length = len("aliasByMetricAndDescription(")
-            suffix_length = 1
-        elif target_string.startswith("movingAverageWithAlias("):
-            self.alias_type = Target.ALIAS
-            self.alias_value = ",".join(target_string.split(",")[1:-1])
-            self.moving_average_interval = Timedelta.from_string(
-                target_string.split(",")[-1][:-1]
-            )
-            prefix_length = len("movingAverageWithAlias(")
-            suffix_length = (
-                len(",".join(target_string.split(",")[1:])[:-1]) + 2
-            )  # remove alias string, separation comma, moving average window, closing bracket and separation comma
-        if prefix_length:
-            extracted_target_string = target_string[prefix_length:-suffix_length]
-        return extracted_target_string
 
     def convert_response(self, response: HistoryResponse, time_measurement):
         results = []
@@ -271,20 +229,8 @@ class Target:
                 return "{}/{}".format(self.target, aggregation_type)
             else:
                 return self.target
-        if self.alias_type == Target.ALIAS or self.alias_type == Target.DESC:
+        else:
             return self.alias_value
-        elif self.alias_type == Target.METRIC:
-            if aggregation_type:
-                return "{}/{}".format(self.target.replace(".", "/"), aggregation_type)
-            else:
-                return self.target.replace(".", "/")
-        elif self.alias_type == Target.METRICDESC:
-            if aggregation_type:
-                return "{}/{} ({})".format(
-                    self.target.replace(".", "/"), aggregation_type, self.alias_value
-                )
-            else:
-                return "{} ({})".format(self.target.replace(".", "/"), self.alias_value)
 
     async def get_description(self, app):
         metadata = await self.get_metadata(app)
@@ -306,7 +252,7 @@ class Target:
         return data, (perf_end_ns - perf_begin_ns) / 1e9
 
     async def get_response(self, app, start_time, end_time, interval):
-        if self.alias_type in (Target.DESC, Target.METRICDESC):
+        if self.alias_type == Target.DESC:
             ((data, time_delta_ns), description) = await asyncio.gather(
                 self.get_data(app, start_time, end_time, interval),
                 self.get_description(app),
