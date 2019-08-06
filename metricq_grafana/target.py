@@ -17,11 +17,19 @@ class Target:
      Contains metric, name, aggregates, sma config
     """
 
-    def __init__(self, metric, name=None, functions=None, order_time_value=False):
+    def __init__(
+        self,
+        metric,
+        name=None,
+        functions=None,
+        order_time_value=False,
+        scaling_factor=1,
+    ):
         self.metric = metric
         self.name = name if name else "$metric/$function"
         self.functions = functions if functions else [AvgFunction()]
         self.order_time_value = order_time_value
+        self.scaling_factor = scaling_factor
 
     async def get_metadata(self, app):
         result = await app["history_client"].history_metric_metadata(
@@ -83,6 +91,7 @@ class Target:
 
     def _transform_data(self, function, response_aggregates):
         for timestamp, value in function.transform_data(response_aggregates):
+            value = value * self.scaling_factor
             if self.order_time_value:
                 yield timestamp.posix_ms, sanitize_number(value)
             else:

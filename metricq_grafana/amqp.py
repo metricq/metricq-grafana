@@ -20,9 +20,10 @@ async def get_history_data(app, request):
     for target_dict in request["targets"]:
         targets.append(
             Target(
-                target_dict["metric"],
-                target_dict.get("name", None),
-                list(parse_functions(target_dict)),
+                metric=target_dict["metric"],
+                name=target_dict.get("name", None),
+                functions=list(parse_functions(target_dict)),
+                scaling_factor=float(target_dict.get("scaling_factor", "1")),
             )
         )
 
