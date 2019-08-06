@@ -25,9 +25,9 @@ class Target:
 
     async def get_metadata(self, app):
         result = await app["history_client"].history_metric_metadata(
-            selector=[self.name]
+            selector=[self.metric]
         )
-        return result.get(self.name, None)
+        return result.get(self.metric, None)
 
     async def get_response(self, app, start_time, end_time, interval):
         metadata = None
