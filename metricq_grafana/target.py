@@ -2,12 +2,13 @@ import asyncio
 import time
 from string import Template
 
+import scorep.instrumenter
+import scorep.user
 from metricq import get_logger
 from metricq.history_client import HistoryResponse
 
 from .functions import AvgFunction
 from .utils import sanitize_number
-
 
 logger = get_logger(__name__)
 
@@ -65,21 +66,34 @@ class Target:
         return Template(self.name).safe_substitute(**metadata)
 
     def _convert_response(self, response: HistoryResponse, time_measurement, metadata):
-        response_aggregates = list(response.aggregates(convert=True))
+        with scorep.instrumenter.disable():
+            with scorep.user.region("response.aggregates"):
+                response_aggregates = list(response.aggregates(convert=True))
 
-        return [
-            {
-                "target": self._get_aliased_target(function, metadata),
-                "time_measurements": {
-                    "db": response.request_duration,
-                    "http": time_measurement,
-                },
-                "datapoints": [
-                    data for data in self._transform_data(function, response_aggregates)
-                ],
-            }
-            for function in self.functions
-        ]
+            result = []
+            for function in self.functions:
+                with scorep.user.region(str(function)):
+                    target = self._get_aliased_target(function, metadata)
+                    with scorep.user.region("datapoints"):
+                        datapoints = [
+                            data
+                            for data in self._transform_data(
+                                function, response_aggregates
+                            )
+                        ]
+
+                    result.append(
+                        {
+                            "target": target,
+                            "time_measurements": {
+                                "db": response.request_duration,
+                                "http": time_measurement,
+                            },
+                            "datapoints": datapoints,
+                        }
+                    )
+
+        return result
 
     def _transform_data(self, function, response_aggregates):
         for timestamp, value in function.transform_data(response_aggregates):
