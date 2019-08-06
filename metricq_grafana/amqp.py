@@ -9,6 +9,8 @@ from metricq import get_logger
 from metricq.types import Timedelta, Timestamp
 
 from .utils import Target
+from .functions import parse_function
+
 
 logger = get_logger(__name__)
 timer = time.monotonic
@@ -18,7 +20,14 @@ async def get_history_data(app, request):
     time_begin = timer()
     targets = []
     for target_dict in request["targets"]:
-        targets.append(Target.extract_from_dict(target_dict))
+        targets.append(
+            Target(
+                target_dict["metric"],
+                target_dict.get("name", None),
+                parse_functions(target_dict),
+                order_time_value,
+            )
+        )
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
@@ -71,7 +80,7 @@ async def get_counter_list(app, selector):
 
 async def get_counter_data(app, metric, start, stop, width):
     time_begin = timer()
-    target = Target.extract_from_string(metric, order_time_value=True)
+    target = Target(metric, order_time_value=True)
     start_time = Timestamp(start * 10 ** 6)
     end_time = Timestamp(stop * 10 ** 6)
     interval = (end_time - start_time) / width
