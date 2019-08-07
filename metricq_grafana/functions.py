@@ -31,8 +31,8 @@ class Function(ABC):
     def __lt__(self, other):
         return self._order < other._order
 
-    @abstractmethod
     @property
+    @abstractmethod
     def _order(self):
         pass
 
