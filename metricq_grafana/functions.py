@@ -28,6 +28,14 @@ class Function(ABC):
     def __init__(self):
         self.interval = Timedelta(0)
 
+    def __lt__(self, other):
+        return self._order < other._order
+
+    @abstractmethod
+    @property
+    def _order(self):
+        pass
+
     @abstractmethod
     def transform_data(self, response_aggregates):
         pass
@@ -36,6 +44,10 @@ class Function(ABC):
 class AvgFunction(Function):
     def __str__(self):
         return "avg"
+
+    @property
+    def _order(self):
+        return 2
 
     def transform_data(self, response_aggregates):
         for timeaggregate in response_aggregates:
@@ -47,6 +59,10 @@ class MinFunction(Function):
     def __str__(self):
         return "min"
 
+    @property
+    def _order(self):
+        return 3
+
     def transform_data(self, response_aggregates):
         for timeaggregate in response_aggregates:
             if timeaggregate.count != 0:
@@ -57,6 +73,10 @@ class MaxFunction(Function):
     def __str__(self):
         return "max"
 
+    @property
+    def _order(self):
+        return 1
+
     def transform_data(self, response_aggregates):
         for timeaggregate in response_aggregates:
             if timeaggregate.count != 0:
@@ -66,6 +86,10 @@ class MaxFunction(Function):
 class CountFunction(Function):
     def __str__(self):
         return "count"
+
+    @property
+    def _order(self):
+        return 0
 
     def transform_data(self, response_aggregates):
         for timeaggregate in response_aggregates:
@@ -78,6 +102,10 @@ class MovingAverageFunction(Function):
 
     def __str__(self):
         return "sma"
+
+    @property
+    def _order(self):
+        return 4
 
     def transform_data(self, response_aggregates):
         if len(response_aggregates) == 0:

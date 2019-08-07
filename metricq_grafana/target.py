@@ -27,7 +27,7 @@ class Target:
     ):
         self.metric = metric
         self.name = name if name else "$metric/$function"
-        self.functions = functions if functions else [AvgFunction()]
+        self.functions = functions.sort() if functions else [AvgFunction()]
         self.order_time_value = order_time_value
         self.scaling_factor = scaling_factor
 
