@@ -11,6 +11,8 @@ def parse_functions(target_dict):
             yield MinFunction()
         elif function == "max":
             yield MaxFunction()
+        elif function == "count":
+            yield CountFunction()
         elif function == "sma":
             try:
                 yield MovingAverageFunction(
