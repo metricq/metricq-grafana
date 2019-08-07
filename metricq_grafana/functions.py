@@ -107,6 +107,18 @@ class MovingAverageFunction(Function):
     def _order(self):
         return 4
 
+    def _calculate_interval_durations(self, response_aggregates):
+        # we assume LAST semantic, but this should not matter for equidistant intervals
+        yield Timedelta(0)
+
+        for previous_ta, current_ta in zip(
+            response_aggregates, response_aggregates[1:]
+        ):
+            duration = current_ta.timestamp - previous_ta.timestamp
+            # We need strong monotony. DB-HTA guarantees it currently
+            assert duration > Timedelta(0)
+            yield duration
+
     def transform_data(self, response_aggregates):
         if len(response_aggregates) == 0:
             return []
@@ -118,21 +130,15 @@ class MovingAverageFunction(Function):
         ma_end_index = 1
         ma_end_time = response_aggregates[0].timestamp
 
-        # we assume LAST semantic, but this should not matter for equidistant intervals
-        interval_durations = [
-            current_ta.timestamp - previous_ta.timestamp
-            for previous_ta, current_ta in zip(
-                response_aggregates, response_aggregates[1:]
-            )
-        ]
-        # We need strong monotony. DB-HTA guarantees it currently
-        assert min(interval_durations) > Timedelta(0)
-        interval_durations = [Timedelta(0)] + interval_durations
+        interval_durations = list(
+            self._calculate_interval_durations(response_aggregates)
+        )
 
         for timeaggregate, current_interval_duration in zip(
             response_aggregates, interval_durations
         ):
             # The moving average window is symmetric around the current *interval* - not the current point
+
             # How much time is covered by the current interval width and how much is on both sides "outside"
             assert current_interval_duration >= Timedelta(0)
             outside_duration = self.interval - current_interval_duration
