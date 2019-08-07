@@ -27,8 +27,10 @@ class Target:
     ):
         self.metric = metric
         self.name = name if name else "$metric/$function"
+
         self.functions = functions if functions else [AvgFunction()]
         self.functions.sort()
+
         self.order_time_value = order_time_value
         self.scaling_factor = scaling_factor
 
@@ -36,23 +38,31 @@ class Target:
         result = await app["history_client"].history_metric_metadata(
             selector=[self.metric]
         )
-        return result.get(self.metric, None)
+        return result.get(self.metric, {})
 
     async def get_response(self, app, start_time, end_time, interval):
-        metadata = None
-        if self.name:
-            ((data, time_delta_ns), metadata) = await asyncio.gather(
-                self._get_data(app, start_time, end_time, interval),
-                self.get_metadata(app),
-            )
-        else:
-            data, time_delta_ns = await self._get_data(
-                app, start_time, end_time, interval
-            )
+        ((data, time_delta_ns), metadata) = await asyncio.gather(
+            self._get_data(app, start_time, end_time, interval), self._get_metadata(app)
+        )
 
         if data is None or time_delta_ns is None:
             return []
         return self._convert_response(data, time_delta_ns, metadata)
+
+    @property
+    def metadata_required(self):
+        keys = [
+            key
+            for key in self._pattern_keys(self.name)
+            if key not in ["metric", "function"]
+        ]
+        return len(keys) > 0
+
+    async def _get_metadata(self, app):
+        if not self.metadata_required:
+            return {}
+
+        return await self.get_metadata(app)
 
     async def _get_data(self, app, start_time, end_time, interval):
         perf_begin_ns = time.perf_counter_ns()
@@ -66,8 +76,6 @@ class Target:
         return data, (perf_end_ns - perf_begin_ns) / 1e9
 
     def _get_aliased_target(self, function, metadata) -> str:
-        if metadata is None:
-            metadata = {}
         metadata["function"] = str(function)
         metadata["metric"] = self.metric
 
@@ -101,3 +109,7 @@ class Target:
     @property
     def _additional_interval(self):
         return max(function.interval for function in self.functions)
+
+    @staticmethod
+    def _pattern_keys(pattern):
+        return [s[1] or s[2] for s in Template.pattern.findall(pattern) if s[1] or s[2]]
