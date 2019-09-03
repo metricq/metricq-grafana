@@ -93,7 +93,8 @@ class CountFunction(Function):
 
     def transform_data(self, response_aggregates):
         for timeaggregate in response_aggregates:
-            yield timeaggregate.timestamp, timeaggregate.count
+            if timeaggregate.count != 0:
+                yield timeaggregate.timestamp, timeaggregate.count
 
 
 class MovingAverageFunction(Function):

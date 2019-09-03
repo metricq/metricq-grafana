@@ -6,9 +6,8 @@ import time
 from metricq import get_logger
 from metricq.types import Timedelta, Timestamp
 
-from .target import Target
 from .functions import parse_functions
-
+from .target import Target
 
 logger = get_logger(__name__)
 timer = time.monotonic

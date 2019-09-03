@@ -8,7 +8,6 @@ from metricq.history_client import HistoryResponse
 from .functions import AvgFunction
 from .utils import sanitize_number
 
-
 logger = get_logger(__name__)
 
 
