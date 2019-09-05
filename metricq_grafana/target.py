@@ -3,9 +3,13 @@ import time
 from string import Template
 
 from metricq import get_logger
-from metricq.history_client import HistoryResponse
+from metricq.history_client import (
+    HistoryRequestType,
+    HistoryResponse,
+    HistoryResponseType,
+)
 
-from .functions import AvgFunction
+from .functions import AggregateFunction, AvgFunction, RawFunction
 from .utils import sanitize_number
 
 logger = get_logger(__name__)
@@ -69,7 +73,12 @@ class Target:
         start_time -= extension
         end_time += extension
         data = await app["history_client"].history_data_request(
-            self.metric, start_time, end_time, interval, timeout=30
+            self.metric,
+            start_time,
+            end_time,
+            interval,
+            timeout=30,
+            request_type=HistoryRequestType.FLEX_TIMELINE,
         )
         perf_end_ns = time.perf_counter_ns()
         return data, (perf_end_ns - perf_begin_ns) / 1e9
@@ -81,7 +90,16 @@ class Target:
         return Template(self.name).safe_substitute(**metadata)
 
     def _convert_response(self, response: HistoryResponse, time_measurement, metadata):
-        response_aggregates = list(response.aggregates(convert=True))
+        # TODO find a way to cache the response.aggregates again...
+        if response.mode == HistoryResponseType.VALUES:
+            # Drop all aggregates and add raw values
+            has_aggregate = any(
+                [isinstance(f, AggregateFunction) for f in self.functions]
+            )
+            if has_aggregate:
+                self.functions = [
+                    f for f in self.functions if not isinstance(f, AggregateFunction)
+                ] + [RawFunction()]
 
         return [
             {
@@ -91,14 +109,14 @@ class Target:
                     "http": time_measurement,
                 },
                 "datapoints": [
-                    data for data in self._transform_data(function, response_aggregates)
+                    data for data in self._transform_data(function, response)
                 ],
             }
             for function in self.functions
         ]
 
-    def _transform_data(self, function, response_aggregates):
-        for timestamp, value in function.transform_data(response_aggregates):
+    def _transform_data(self, function, response):
+        for timestamp, value in function.transform_data(response):
             value = value * self.scaling_factor
             if self.order_time_value:
                 yield timestamp.posix_ms, sanitize_number(value)

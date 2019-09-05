@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from metricq.history_client import HistoryResponse, HistoryResponseType
 from metricq.types import Timedelta
 
 
@@ -20,6 +21,7 @@ def parse_functions(target_dict):
                 )
             except (TypeError, KeyError):
                 pass
+        # Cannot instantiate RawFunction - it automatically replaces the aggregates when zooming in
         else:
             raise KeyError(f"Unknown function '{function}' requested")
 
@@ -37,11 +39,15 @@ class Function(ABC):
         pass
 
     @abstractmethod
-    def transform_data(self, response_aggregates):
+    def transform_data(self, response):
         pass
 
 
-class AvgFunction(Function):
+class AggregateFunction(Function, ABC):
+    pass
+
+
+class AvgFunction(AggregateFunction):
     def __str__(self):
         return "avg"
 
@@ -49,13 +55,13 @@ class AvgFunction(Function):
     def _order(self):
         return 2
 
-    def transform_data(self, response_aggregates):
-        for timeaggregate in response_aggregates:
+    def transform_data(self, response):
+        for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.mean
 
 
-class MinFunction(Function):
+class MinFunction(AggregateFunction):
     def __str__(self):
         return "min"
 
@@ -63,13 +69,13 @@ class MinFunction(Function):
     def _order(self):
         return 3
 
-    def transform_data(self, response_aggregates):
-        for timeaggregate in response_aggregates:
+    def transform_data(self, response):
+        for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.minimum
 
 
-class MaxFunction(Function):
+class MaxFunction(AggregateFunction):
     def __str__(self):
         return "max"
 
@@ -77,13 +83,13 @@ class MaxFunction(Function):
     def _order(self):
         return 1
 
-    def transform_data(self, response_aggregates):
-        for timeaggregate in response_aggregates:
+    def transform_data(self, response):
+        for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.maximum
 
 
-class CountFunction(Function):
+class CountFunction(AggregateFunction):
     def __str__(self):
         return "count"
 
@@ -91,10 +97,23 @@ class CountFunction(Function):
     def _order(self):
         return 0
 
-    def transform_data(self, response_aggregates):
-        for timeaggregate in response_aggregates:
+    def transform_data(self, response):
+        for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.count
+
+
+class RawFunction(Function):
+    def __str__(self):
+        return "raw"
+
+    @property
+    def _order(self):
+        return 2
+
+    def transform_data(self, response: HistoryResponse):
+        for tv in response.values(convert=False):
+            yield tv.timestamp, tv.value
 
 
 class MovingAverageFunction(Function):
@@ -120,9 +139,11 @@ class MovingAverageFunction(Function):
             assert duration > Timedelta(0)
             yield duration
 
-    def transform_data(self, response_aggregates):
-        if len(response_aggregates) == 0:
+    def transform_data(self, response):
+        if len(response) == 0:
             return []
+
+        response_aggregates = list(response.aggregates(convert=True))
 
         ma_integral = 0
         ma_active_time = 0
