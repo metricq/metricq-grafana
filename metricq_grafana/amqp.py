@@ -28,7 +28,11 @@ async def get_history_data(app, request):
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
-    interval = Timedelta.from_ms(request["intervalMs"])
+    # Grafana gives inconsistent information here:
+    #    intervalMs is very coarse grained
+    #    maxDataPoints is not really the number of pixels, usually less
+    # interval = Timedelta.from_ms(request["intervalMs"])
+    interval = (end_time - start_time) / request["maxDataPoints"]
     results = await asyncio.gather(
         *[
             target.get_response(app, start_time, end_time, interval)
