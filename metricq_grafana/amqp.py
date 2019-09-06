@@ -32,7 +32,7 @@ async def get_history_data(app, request):
     #    intervalMs is very coarse grained
     #    maxDataPoints is not really the number of pixels, usually less
     # interval = Timedelta.from_ms(request["intervalMs"])
-    interval = ((end_time - start_time) / request["maxDataPoints"]) / 2
+    interval = ((end_time - start_time) / request["maxDataPoints"]) * 2
     results = await asyncio.gather(
         *[
             target.get_response(app, start_time, end_time, interval)
