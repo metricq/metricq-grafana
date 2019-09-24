@@ -58,3 +58,7 @@ async def legacy_counter_data(request):
         int(data["width"]),
     )
     return web.json_response(counter_data)
+
+
+async def test_connection(request):
+    raise web.HTTPOk

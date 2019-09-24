@@ -1,5 +1,11 @@
 """Module for route setup"""
-from .views import legacy_cntr_status, legacy_counter_data, query, search
+from .views import (
+    legacy_cntr_status,
+    legacy_counter_data,
+    query,
+    search,
+    test_connection,
+)
 
 
 def setup_routes(app, cors):
@@ -15,3 +21,6 @@ def setup_routes(app, cors):
 
     resource = cors.add(app.router.add_resource("/legacy/counter_data.php"))
     cors.add(resource.add_route("GET", legacy_counter_data))
+
+    resource = cors.add(app.router.add_resource("/"))
+    cors.add(resource.add_route("GET", test_connection))
