@@ -53,7 +53,7 @@ def create_app(loop, token, management_url, management_exchange):
         defaults={
             # Allow all to read all CORS-enabled resources from
             # http://client.example.org.
-            "https://grafana.zih.tu-dresden.de": aiohttp_cors.ResourceOptions(
+            "http://localhost:4000": aiohttp_cors.ResourceOptions(
                 allow_headers=("Content-Type",)
             )
         },
