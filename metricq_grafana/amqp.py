@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import logging
 import operator
 import time
 
@@ -40,9 +41,14 @@ async def get_history_data(app, request):
         ]
     )
     rv = functools.reduce(operator.iconcat, results, [])
-    logger.info(
-        "get_history_data for {} targets took {} s", len(targets), timer() - time_begin
+    time_diff = timer() - time_begin
+    logger.log(
+        logging.DEBUG if time_diff < 1 else logging.INFO,
+        "get_history_data for {} targets took {} s",
+        len(targets),
+        time_diff,
     )
+
     return rv
 
 
@@ -60,11 +66,13 @@ async def get_metric_list(app, search_query):
         rv = sorted(result)
     else:
         rv = []
-    logger.info(
+    time_diff = timer() - time_begin
+    logger.log(
+        logging.DEBUG if time_diff < 1 else logging.INFO,
         "get_metric_list for {} returned {} metrics and took {} s",
         search_query,
         len(rv),
-        timer() - time_begin,
+        time_diff,
     )
     return rv
 
@@ -75,11 +83,13 @@ async def get_counter_list(app, selector):
     result = []
     for metric, metadata in metrics.items():
         result.append([metric, metadata.get("description", "")])
-    logger.info(
+    time_diff = timer() - time_begin
+    logger.log(
+        logging.DEBUG if time_diff < 1 else logging.INFO,
         "get_counter_list for {} returned {} metrics and took {} s",
         selector,
         len(result),
-        timer() - time_begin,
+        time_diff,
     )
     return result
 
@@ -101,10 +111,12 @@ async def get_counter_data(app, metric, start, stop, width):
         "unit": metadata.get("unit", ""),
         "data": result["datapoints"],
     }
-    logger.info(
+    time_diff = timer() - time_begin
+    logger.log(
+        logging.DEBUG if time_diff < 1 else logging.INFO,
         "get_counter_data for {} returned {} values and took {} s",
         metric,
         len(rv["data"]),
-        timer() - time_begin,
+        time_diff,
     )
     return rv
