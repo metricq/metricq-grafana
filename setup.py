@@ -23,4 +23,5 @@ setup(
         "metricq",
         "aiocache",
     ],
+    extras_require={"journallogger": ["systemd"]},
 )

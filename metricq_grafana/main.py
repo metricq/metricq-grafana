@@ -76,12 +76,22 @@ def panic(loop, context):
 @click.option("--token", default="metricq-grafana")
 @click.option("--management-exchange", default="metricq.management")
 @click.option("--debug/--no-debug", default=False)
+@click.option("--log-to-journal/--no-log-to-journal", default=False)
 @click_log.simple_verbosity_option(logger)
-def runserver_cmd(management_url, token, management_exchange, debug):
+def runserver_cmd(management_url, token, management_exchange, debug, log_to_journal):
     loop = asyncio.get_event_loop()
     if debug:
         logger.warn("Using loop debug - this is slow")
         loop.set_debug(True)
+
+    if log_to_journal:
+        try:
+            from systemd import journal
+
+            logger.handlers[0] = journal.JournaldLogHandler()
+        except ImportError:
+            logger.error("Can't enable journal logger, systemd package not found!")
+
     # loop.set_exception_handler(panic)
     app = create_app(loop, token, management_url, management_exchange)
     # logger.info("starting management loop")
