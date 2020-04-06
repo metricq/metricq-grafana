@@ -1,6 +1,6 @@
 """Module for view functions"""
 import time
-from asyncio import futures
+from asyncio import TimeoutError
 
 from aiohttp import web
 from metricq import get_logger
@@ -25,7 +25,7 @@ async def query(request):
                 (perf_end_process_ns - perf_begin_process_ns) / 1e9
             ),
         }
-    except futures.TimeoutError:
+    except TimeoutError:
         # No one responds means not found
         raise web.HTTPNotFound()
     return web.json_response(resp, headers=headers)
