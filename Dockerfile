@@ -5,9 +5,9 @@ USER root
 RUN apt-get update && apt-get install -y git wget
 
 USER metricq
-COPY --chown=metricq:metricq . /home/metricq/manager
+COPY --chown=metricq:metricq . /home/metricq/grafana
 
-WORKDIR /home/metricq/manager
+WORKDIR /home/metricq/grafana
 RUN . /home/metricq/venv/bin/activate && pip install .
 RUN wget -O wait-for-it.sh https://github.com/vishnubob/wait-for-it/raw/master/wait-for-it.sh && chmod +x wait-for-it.sh
 
@@ -15,7 +15,7 @@ FROM metricq-python:latest
 
 USER metricq
 COPY --from=builder /home/metricq/venv /home/metricq/venv
-COPY --from=builder /home/metricq/manager/wait-for-it.sh /home/metricq/wait-for-it.sh
+COPY --from=builder /home/metricq/grafana/wait-for-it.sh /home/metricq/wait-for-it.sh
 
 ARG wait_for_rabbitmq_url=127.0.0.1:5672
 ENV wait_for_rabbitmq_url=$wait_for_rabbitmq_url
