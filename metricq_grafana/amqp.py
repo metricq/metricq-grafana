@@ -106,10 +106,14 @@ async def get_counter_data(app, metric, start, stop, width):
     )
     result = results[0] if len(results) > 0 else {"datapoints": []}
 
+    datapoints = [
+        datapoint for datapoint in result["datapoints"] if start <= datapoint[0] <= stop
+    ]
+
     rv = {
         "description": metadata.get("description", ""),
         "unit": metadata.get("unit", ""),
-        "data": result["datapoints"],
+        "data": datapoints,
     }
     time_diff = timer() - time_begin
     logger.log(
