@@ -80,17 +80,16 @@ async def get_metric_list(app, search_query):
 async def get_metadata(app, metric):
     time_begin = timer()
     result = await app["history_client"].get_metrics(selector=[metric])
-    if result:
-        rv = result
-    else:
-        rv = []
     logger.info(
         "get_metadata for {} returned {} metrics and took {} s",
         metric,
-        len(rv),
+        len(result),
         timer() - time_begin,
     )
-    return rv
+    if result:
+        return result
+    else:
+        raise KeyError(f"Could not find any metadata for '{metric}'")
 
 
 async def get_counter_list(app, selector):

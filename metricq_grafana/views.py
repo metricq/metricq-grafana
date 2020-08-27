@@ -47,7 +47,11 @@ async def search(request):
 async def metadata(request):
     metrics = (await request.json())["target"]
     logger.debug("Metadata query: {}", metrics)
-    return web.json_response(await get_metadata(request.app, metrics))
+
+    try:
+        return web.json_response(await get_metadata(request.app, metrics))
+    except KeyError as e:
+        raise web.HTTPNotFound() from e
 
 
 async def legacy_cntr_status(request):
