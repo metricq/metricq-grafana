@@ -5,7 +5,13 @@ from asyncio import TimeoutError
 from aiohttp import web
 from metricq import get_logger
 
-from .amqp import get_counter_data, get_counter_list, get_history_data, get_metric_list
+from .amqp import (
+    get_counter_data,
+    get_counter_list,
+    get_history_data,
+    get_metric_list,
+    get_metadata,
+)
 
 logger = get_logger(__name__)
 
@@ -36,6 +42,12 @@ async def search(request):
     logger.debug("Search query: {}", search_query)
     metric_list = await get_metric_list(request.app, search_query)
     return web.json_response(metric_list)
+
+
+async def metadata(request):
+    metrics = (await request.json())["target"]
+    logger.debug("Metadata query: {}", metrics)
+    return web.json_response(await get_metadata(request.app, metrics))
 
 
 async def legacy_cntr_status(request):

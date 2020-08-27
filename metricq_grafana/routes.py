@@ -4,6 +4,7 @@ from .views import (
     legacy_counter_data,
     query,
     search,
+    metadata,
     test_connection,
 )
 
@@ -15,6 +16,9 @@ def setup_routes(app, cors):
 
     resource = cors.add(app.router.add_resource("/search"))
     cors.add(resource.add_route("POST", search))
+
+    resource = cors.add(app.router.add_resource("/metadata"))
+    cors.add(resource.add_route("POST", metadata))
 
     resource = cors.add(app.router.add_resource("/legacy/cntr_status.php"))
     cors.add(resource.add_route("POST", legacy_cntr_status))
