@@ -22,7 +22,7 @@ async def get_history_data(app, request):
         if target_dict["metric"].startswith("(") and target_dict["metric"].endswith(
             ")"
         ):
-            metrics = target_dict[1:-1].split("|")
+            metrics = [m.replace("\\.", ".") for m in target_dict[1:-1].split("|")]
         for metric in metrics:
             targets.append(
                 Target(
