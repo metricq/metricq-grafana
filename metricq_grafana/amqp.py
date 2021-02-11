@@ -22,11 +22,11 @@ async def get_history_data(app, request):
         if target_dict["metric"].startswith("(") and target_dict["metric"].endswith(
             ")"
         ):
-            metrics = [m.replace("\\.", ".") for m in target_dict[1:-1].split("|")]
+            metrics = target_dict[1:-1].split("|")
         for metric in metrics:
             targets.append(
                 Target(
-                    metric=metric,
+                    metric=metric.replace("\\.", "."),
                     name=target_dict.get("name", None),
                     functions=list(parse_functions(target_dict)),
                     scaling_factor=float(target_dict.get("scaling_factor", "1")),
