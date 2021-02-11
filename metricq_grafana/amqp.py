@@ -18,14 +18,20 @@ async def get_history_data(app, request):
     time_begin = timer()
     targets = []
     for target_dict in request["targets"]:
-        targets.append(
-            Target(
-                metric=target_dict["metric"],
-                name=target_dict.get("name", None),
-                functions=list(parse_functions(target_dict)),
-                scaling_factor=float(target_dict.get("scaling_factor", "1")),
+        metrics = [target_dict["metric"]]
+        if target_dict["metric"].startswith("(") and target_dict["metric"].endswith(
+            ")"
+        ):
+            metrics = target_dict[1:-1].split("|")
+        for metric in metrics:
+            targets.append(
+                Target(
+                    metric=metric,
+                    name=target_dict.get("name", None),
+                    functions=list(parse_functions(target_dict)),
+                    scaling_factor=float(target_dict.get("scaling_factor", "1")),
+                )
             )
-        )
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
