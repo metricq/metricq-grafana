@@ -19,14 +19,14 @@ async def get_history_data(app, request):
     targets = []
     for target_dict in request["targets"]:
         metrics = [target_dict["metric"]]
-        if target_dict["metric"].startswith("(") and target_dict["metric"].endswith(
-            ")"
-        ):
-            metrics = target_dict["metric"][1:-1].split("|")
+        if "(" in target_dict["metric"] and ")" in target_dict["metric"]:
+            metrics = await app["history_client"].get_metrics(
+                metadata=False, historic=True, selector=target_dict["metric"]
+            )
         for metric in metrics:
             targets.append(
                 Target(
-                    metric=metric.replace("\\.", "."),
+                    metric=metric,
                     name=target_dict.get("name", None),
                     functions=list(parse_functions(target_dict)),
                     scaling_factor=float(target_dict.get("scaling_factor", "1")),
