@@ -19,6 +19,7 @@ async def get_history_data(app, request):
     targets = []
     for target_dict in request["targets"]:
         metrics = [target_dict["metric"]]
+        # guess if this is a pattern (regex) to expand by sending it to the manager
         if "(" in target_dict["metric"] and ")" in target_dict["metric"]:
             metrics = await app["history_client"].get_metrics(
                 metadata=False, historic=True, selector=target_dict["metric"]
