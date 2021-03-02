@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 class Target:
     """
-     Contains metric, name, aggregates, sma config
+    Contains metric, name, aggregates, sma config
     """
 
     def __init__(
@@ -38,8 +38,8 @@ class Target:
         self.scaling_factor = scaling_factor
 
     async def get_metadata(self, app):
-        result = await app["history_client"].history_metric_metadata(
-            selector=[self.metric]
+        result = await app["history_client"].get_metrics(
+            selector=[self.metric], metadata=True
         )
         return result.get(self.metric, {})
 
