@@ -1,4 +1,4 @@
-FROM metricq-python:latest AS builder
+FROM metricq/metricq-python:latest AS builder
 LABEL maintainer="mario.bielert@tu-dresden.de"
 
 USER root
@@ -11,7 +11,7 @@ WORKDIR /home/metricq/grafana
 RUN . /home/metricq/venv/bin/activate && pip install .
 RUN wget -O wait-for-it.sh https://github.com/vishnubob/wait-for-it/raw/master/wait-for-it.sh && chmod +x wait-for-it.sh
 
-FROM metricq-python:latest
+FROM metricq/metricq-python:latest
 
 USER metricq
 COPY --from=builder /home/metricq/venv /home/metricq/venv
