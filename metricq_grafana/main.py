@@ -19,7 +19,6 @@ logger = get_logger()
 
 click_log.basic_config(logger)
 logger.setLevel("INFO")
-# logger.handlers[0].addFilter(logging.Filter(name='metricq_grafana'))
 logger.handlers[0].formatter = logging.Formatter(
     fmt="%(asctime)s [%(levelname)-8s] [%(name)-20s] %(message)s"
 )
@@ -52,7 +51,6 @@ def create_app(loop, token, management_url, management_exchange, port):
         app,
         defaults={
             # Allow all to read all CORS-enabled resources from
-            # http://client.example.org.
             f"http://localhost:{port}": aiohttp_cors.ResourceOptions(
                 allow_headers=("Content-Type",)
             )
@@ -94,7 +92,5 @@ def runserver_cmd(management_url, token, management_exchange, debug, log_to_jour
         except ImportError:
             logger.error("Can't enable journal logger, systemd package not found!")
 
-    # loop.set_exception_handler(panic)
     app = create_app(loop, token, management_url, management_exchange, port)
-    # logger.info("starting management loop")
     web.run_app(app, host=host, port=port)
