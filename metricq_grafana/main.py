@@ -38,7 +38,7 @@ async def cleanup_background_tasks(app):
     pass
 
 
-def create_app(loop, token, management_url, management_exchange):
+def create_app(loop, token, management_url, management_exchange, port):
     app = web.Application(loop=loop)
     app["token"] = token
     app["management_url"] = management_url
@@ -53,7 +53,7 @@ def create_app(loop, token, management_url, management_exchange):
         defaults={
             # Allow all to read all CORS-enabled resources from
             # http://client.example.org.
-            "http://localhost:4000": aiohttp_cors.ResourceOptions(
+            f"http://localhost:{port}": aiohttp_cors.ResourceOptions(
                 allow_headers=("Content-Type",)
             )
         },
@@ -77,8 +77,10 @@ def panic(loop, context):
 @click.option("--management-exchange", default="metricq.management")
 @click.option("--debug/--no-debug", default=False)
 @click.option("--log-to-journal/--no-log-to-journal", default=False)
+@click.option("--host", default="0.0.0.0")
+@click.option("--port", default="4000")
 @click_log.simple_verbosity_option(logger)
-def runserver_cmd(management_url, token, management_exchange, debug, log_to_journal):
+def runserver_cmd(management_url, token, management_exchange, debug, log_to_journal, host, port):
     loop = asyncio.get_event_loop()
     if debug:
         logger.warn("Using loop debug - this is slow")
@@ -93,6 +95,6 @@ def runserver_cmd(management_url, token, management_exchange, debug, log_to_jour
             logger.error("Can't enable journal logger, systemd package not found!")
 
     # loop.set_exception_handler(panic)
-    app = create_app(loop, token, management_url, management_exchange)
+    app = create_app(loop, token, management_url, management_exchange, port)
     # logger.info("starting management loop")
-    web.run_app(app, port=4000)
+    web.run_app(app, host=host, port=port)
