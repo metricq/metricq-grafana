@@ -20,7 +20,7 @@ setup(
         "click_log",
         "colorama",
         "protobuf",
-        "metricq",
+        "metricq ~= 2.0",
         "aiocache",
     ],
     extras_require={"journallogger": ["systemd"]},

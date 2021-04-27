@@ -145,8 +145,8 @@ class MovingAverageFunction(Function):
 
         response_aggregates = list(response.aggregates(convert=True))
 
-        ma_integral = 0
-        ma_active_time = 0
+        ma_integral_ns = 0
+        ma_active_time = Timedelta(0)
         ma_begin_index = 1
         ma_begin_time = response_aggregates[0].timestamp
         ma_end_index = 1
@@ -186,7 +186,9 @@ class MovingAverageFunction(Function):
                 ma_active_time -= (
                     response_aggregates[ma_begin_index].active_time * scale
                 )
-                ma_integral -= response_aggregates[ma_begin_index].integral * scale
+                ma_integral_ns -= (
+                    response_aggregates[ma_begin_index].integral_ns * scale
+                )
 
                 ma_begin_time = next_step_time
                 assert ma_begin_time <= response_aggregates[ma_begin_index].timestamp
@@ -206,7 +208,7 @@ class MovingAverageFunction(Function):
                 # 1 (full interval needs to be removed), or something in between
                 scale = step_duration.ns / interval_durations[ma_end_index].ns
                 ma_active_time += response_aggregates[ma_end_index].active_time * scale
-                ma_integral += response_aggregates[ma_end_index].integral * scale
+                ma_integral_ns += response_aggregates[ma_end_index].integral_ns * scale
 
                 ma_end_time = next_step_time
                 assert ma_end_time <= response_aggregates[ma_end_index].timestamp
@@ -220,4 +222,4 @@ class MovingAverageFunction(Function):
             if ma_active_time == 0:
                 continue
 
-            yield timeaggregate.timestamp, ma_integral / ma_active_time
+            yield timeaggregate.timestamp, ma_integral_ns / ma_active_time.ns
