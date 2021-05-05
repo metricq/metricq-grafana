@@ -14,6 +14,7 @@ from metricq import get_logger
 
 from .client import Client
 from .routes import setup_routes
+from .version import version
 
 logger = get_logger()
 
@@ -28,7 +29,7 @@ click_completion.init()
 
 async def start_background_tasks(app):
     app["history_client"] = Client(
-        app["token"], app["management_url"], event_loop=app.loop
+        app["token"], app["management_url"], client_version=version, event_loop=app.loop
     )
     await app["history_client"].connect()
 
@@ -78,7 +79,10 @@ def panic(loop, context):
 @click.option("--host", default="0.0.0.0")
 @click.option("--port", default="4000")
 @click_log.simple_verbosity_option(logger)
-def runserver_cmd(management_url, token, management_exchange, debug, log_to_journal, host, port):
+@click.version_option(version=version)
+def runserver_cmd(
+    management_url, token, management_exchange, debug, log_to_journal, host, port
+):
     loop = asyncio.get_event_loop()
     if debug:
         logger.warn("Using loop debug - this is slow")
