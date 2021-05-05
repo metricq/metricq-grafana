@@ -24,4 +24,6 @@ setup(
         "aiocache",
     ],
     extras_require={"journallogger": ["systemd"]},
+    setup_requires=["setuptools_scm"],
+    use_scm_version=True,
 )
