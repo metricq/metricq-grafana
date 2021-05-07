@@ -45,11 +45,11 @@ async def search(request):
 
 
 async def metadata(request):
-    metrics = (await request.json())["target"]
-    logger.debug("Metadata query: {}", metrics)
+    metric = (await request.json())["target"]
+    logger.debug("Metadata query: {}", metric)
 
     try:
-        return web.json_response(await get_metadata(request.app, metrics))
+        return web.json_response(await get_metadata(request.app, metric))
     except KeyError as e:
         raise web.HTTPNotFound() from e
 
