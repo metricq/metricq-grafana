@@ -38,7 +38,7 @@ async def cleanup_background_tasks(app):
     pass
 
 
-def create_app(loop, token, management_url, management_exchange, port):
+def create_app(loop, token, management_url, management_exchange, cors_origin):
     app = web.Application(loop=loop)
     app["token"] = token
     app["management_url"] = management_url
@@ -52,7 +52,7 @@ def create_app(loop, token, management_url, management_exchange, port):
         app,
         defaults={
             # Allow all to read all CORS-enabled resources from
-            f"http://localhost:{port}": aiohttp_cors.ResourceOptions(
+            f"{cors_origin}": aiohttp_cors.ResourceOptions(
                 allow_headers=("Content-Type",)
             )
         },
@@ -78,10 +78,18 @@ def panic(loop, context):
 @click.option("--log-to-journal/--no-log-to-journal", default=False)
 @click.option("--host", default="0.0.0.0")
 @click.option("--port", default="4000")
+@click.option("--cors-origin", default="*")
 @click_log.simple_verbosity_option(logger)
 @click.version_option(version=version)
 def runserver_cmd(
-    management_url, token, management_exchange, debug, log_to_journal, host, port
+    management_url,
+    token,
+    management_exchange,
+    debug,
+    log_to_journal,
+    host,
+    port,
+    cors_origin,
 ):
     loop = asyncio.get_event_loop()
     if debug:
@@ -96,5 +104,5 @@ def runserver_cmd(
         except ImportError:
             logger.error("Can't enable journal logger, systemd package not found!")
 
-    app = create_app(loop, token, management_url, management_exchange, port)
+    app = create_app(loop, token, management_url, management_exchange, cors_origin)
     web.run_app(app, host=host, port=port)
