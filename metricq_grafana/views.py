@@ -41,9 +41,10 @@ async def search(request: web.Request):
     json_data = await request.json()
     search_query = json_data["target"]
     metadata_requested = json_data.get("metadata", False)
+    limit = json_data.get("limit")
     logger.debug("Search query: {}", search_query)
     metric_list = await get_metric_list(
-        request.app, search_query, metadata=metadata_requested
+        request.app, search_query, metadata=metadata_requested, limit=limit
     )
     return web.json_response(metric_list)
 

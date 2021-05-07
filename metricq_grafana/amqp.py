@@ -59,14 +59,19 @@ async def get_history_data(app, request):
     return rv
 
 
-async def get_metric_list(app, search_query, metadata=False):
+async def get_metric_list(app, search_query, metadata=False, limit=None):
     time_begin = timer()
     get_metrics_args = {"metadata": metadata, "historic": True}
     if search_query.startswith("/") and search_query.endswith("/"):
         get_metrics_args["selector"] = search_query[1:-1]
+        if limit:
+            get_metrics_args["limit"] = limit
     else:
         get_metrics_args["infix"] = search_query
-        get_metrics_args["limit"] = 100
+        if limit:
+            get_metrics_args["limit"] = limit
+        elif limit is None:
+            get_metrics_args["limit"] = 100
 
     result = await app["history_client"].get_metrics(**get_metrics_args)
     if result:
