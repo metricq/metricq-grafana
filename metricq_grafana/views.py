@@ -37,10 +37,14 @@ async def query(request):
     return web.json_response(resp, headers=headers)
 
 
-async def search(request):
-    search_query = (await request.json())["target"]
+async def search(request: web.Request):
+    json_data = await request.json()
+    search_query = json_data["target"]
+    metadata_requested = json_data.get("metadata", False)
     logger.debug("Search query: {}", search_query)
-    metric_list = await get_metric_list(request.app, search_query)
+    metric_list = await get_metric_list(
+        request.app, search_query, metadata=metadata_requested
+    )
     return web.json_response(metric_list)
 
 

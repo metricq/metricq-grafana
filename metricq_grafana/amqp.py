@@ -59,9 +59,9 @@ async def get_history_data(app, request):
     return rv
 
 
-async def get_metric_list(app, search_query):
+async def get_metric_list(app, search_query, metadata=False):
     time_begin = timer()
-    get_metrics_args = {"metadata": False, "historic": True}
+    get_metrics_args = {"metadata": metadata, "historic": True}
     if search_query.startswith("/") and search_query.endswith("/"):
         get_metrics_args["selector"] = search_query[1:-1]
     else:
