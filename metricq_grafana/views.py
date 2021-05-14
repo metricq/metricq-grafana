@@ -34,6 +34,8 @@ async def query(request):
     except TimeoutError:
         # No one responds means not found
         raise web.HTTPNotFound()
+    except ValueError:
+        raise web.HTTPBadRequest()
     return web.json_response(resp, headers=headers)
 
 
