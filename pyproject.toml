@@ -40,3 +40,4 @@ line_length = 88
 
 [tool.setuptools_scm]
 write_to = "metricq_grafana/version.py"
+fallback_version = "UNKNOWN"
