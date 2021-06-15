@@ -75,7 +75,10 @@ async def get_metric_list(app, search_query, metadata=False, limit=None):
 
     result = await app["history_client"].get_metrics(**get_metrics_args)
     if result:
-        rv = sorted(result)
+        if isinstance(result, list):
+            rv = sorted(result)
+        else:
+            rv = result
     else:
         rv = []
     time_diff = timer() - time_begin
