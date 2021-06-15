@@ -53,7 +53,10 @@ def create_app(loop, token, management_url, management_exchange, cors_origin):
         defaults={
             # Allow all to read all CORS-enabled resources from
             f"{cors_origin}": aiohttp_cors.ResourceOptions(
-                allow_headers=("Content-Type",)
+                allow_headers="*",
+                allow_methods=("GET", "POST", "OPTIONS"),
+                expose_headers="*",
+                max_age=1728000,
             )
         },
     )
