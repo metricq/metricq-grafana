@@ -6,6 +6,7 @@ from .views import (
     search,
     metadata,
     test_connection,
+    analyze,
 )
 
 
@@ -13,6 +14,9 @@ def setup_routes(app, cors):
     """Setup routes and cors for app."""
     resource = cors.add(app.router.add_resource("/query"))
     cors.add(resource.add_route("POST", query))
+
+    resource = cors.add(app.router.add_resource("/analyze"))
+    cors.add(resource.add_route("POST", analyze))
 
     resource = cors.add(app.router.add_resource("/search"))
     cors.add(resource.add_route("POST", search))
