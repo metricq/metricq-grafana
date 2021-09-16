@@ -59,6 +59,64 @@ async def get_history_data(app, request):
     return rv
 
 
+async def get_analyze_data(app, request):
+    time_begin = timer()
+    targets = []
+    for target_dict in request["targets"]:
+        metrics = [target_dict["metric"]]
+        # guess if this is a pattern (regex) to expand by sending it to the manager
+        if "(" in target_dict["metric"] and ")" in target_dict["metric"]:
+            metrics = await app["history_client"].get_metrics(
+                metadata=False, historic=True, selector=target_dict["metric"]
+            )
+        targets.extend(metrics)
+
+    start_time = Timestamp.from_iso8601(request["range"]["from"])
+    end_time = Timestamp.from_iso8601(request["range"]["to"])
+    results = await asyncio.gather(
+        *[get_analyze_response(app, metric, start_time, end_time) for metric in targets]
+    )
+    time_diff = timer() - time_begin
+    logger.log(
+        logging.DEBUG if time_diff < 1 else logging.INFO,
+        "get_analyze_data for {} targets took {} s",
+        len(targets),
+        time_diff,
+    )
+
+    return results
+
+
+async def get_analyze_response(app, metric, start_time, end_time):
+    perf_begin_ns = time.perf_counter_ns()
+    aggregate = await app["history_client"].history_aggregate(
+        metric,
+        start_time,
+        end_time,
+        timeout=30,
+    )
+    perf_end_ns = time.perf_counter_ns()
+
+    if aggregate is None:
+        return None
+
+    return {
+        "target": metric,
+        "time_measurements": {
+            "http": (perf_end_ns - perf_begin_ns) / 1e9,
+        },
+        "minimum": aggregate.minimum,
+        "maximum": aggregate.maximum,
+        "sum": aggregate.sum,
+        "count": aggregate.count,
+        "integral_ns": aggregate.integral_ns,
+        "active_time_ns": aggregate.active_time.ns,
+        "mean": aggregate.mean,
+        "mean_integral": aggregate.mean_integral,
+        "mean_sum": aggregate.mean_sum,
+    }
+
+
 async def get_metric_list(app, search_query, metadata=False, limit=None):
     time_begin = timer()
     get_metrics_args = {"metadata": metadata, "historic": True}
