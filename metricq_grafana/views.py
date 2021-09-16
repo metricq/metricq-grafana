@@ -1,4 +1,6 @@
 """Module for view functions"""
+import logging
+
 import time
 from asyncio import TimeoutError
 
@@ -11,50 +13,34 @@ from .amqp import (
     get_history_data,
     get_metric_list,
     get_metadata,
-    get_analyze_data,
 )
 
 logger = get_logger(__name__)
 
 
-async def query(request):
+async def view_with_duration_measure(amqp_function, request):
     req_json = await request.json()
-    logger.debug("Query request data: {}", req_json)
+    logger.debug("{} request data: {}", amqp_function.__name__, req_json)
     try:
         perf_begin_ns = time.perf_counter_ns()
         perf_begin_process_ns = time.process_time_ns()
-        resp = await get_history_data(request.app, req_json)
+        resp = await amqp_function(request.app, req_json)
         perf_end_ns = time.perf_counter_ns()
         perf_end_process_ns = time.process_time_ns()
+        perf_diff = (perf_end_ns - perf_begin_ns) / 1e9
         headers = {
-            "x-request-duration": str((perf_end_ns - perf_begin_ns) / 1e9),
+            "x-request-duration": str(perf_diff),
             "x-request-duration-cpu": str(
                 (perf_end_process_ns - perf_begin_process_ns) / 1e9
             ),
         }
-    except TimeoutError:
-        # No one responds means not found
-        raise web.HTTPNotFound()
-    except ValueError:
-        raise web.HTTPBadRequest()
-    return web.json_response(resp, headers=headers)
-
-
-async def analyze(request):
-    req_json = await request.json()
-    logger.debug("Analyze request data: {}", req_json)
-    try:
-        perf_begin_ns = time.perf_counter_ns()
-        perf_begin_process_ns = time.process_time_ns()
-        resp = await get_analyze_data(request.app, req_json)
-        perf_end_ns = time.perf_counter_ns()
-        perf_end_process_ns = time.process_time_ns()
-        headers = {
-            "x-request-duration": str((perf_end_ns - perf_begin_ns) / 1e9),
-            "x-request-duration-cpu": str(
-                (perf_end_process_ns - perf_begin_process_ns) / 1e9
-            ),
-        }
+        logger.log(
+            logging.DEBUG if perf_diff < 1 else logging.INFO,
+            "{} for {} targets took {} s",
+            amqp_function.__name__,
+            len(req_json["targets"]),
+            perf_diff,
+        )
     except TimeoutError:
         # No one responds means not found
         raise web.HTTPNotFound()
