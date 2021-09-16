@@ -5,25 +5,21 @@ import operator
 import time
 
 from metricq import get_logger
-from metricq.types import Timedelta, Timestamp
+from metricq.types import Timestamp
 
 from .functions import parse_functions
 from .target import Target
+from .utils import unpack_metric
 
 logger = get_logger(__name__)
 timer = time.monotonic
 
 
 async def get_history_data(app, request):
-    time_begin = timer()
     targets = []
     for target_dict in request["targets"]:
-        metrics = [target_dict["metric"]]
-        # guess if this is a pattern (regex) to expand by sending it to the manager
-        if "(" in target_dict["metric"] and ")" in target_dict["metric"]:
-            metrics = await app["history_client"].get_metrics(
-                metadata=False, historic=True, selector=target_dict["metric"]
-            )
+        metrics = await unpack_metric(app, target_dict["metric"])
+
         for metric in metrics:
             targets.append(
                 Target(
@@ -48,40 +44,19 @@ async def get_history_data(app, request):
         ]
     )
     rv = functools.reduce(operator.iconcat, results, [])
-    time_diff = timer() - time_begin
-    logger.log(
-        logging.DEBUG if time_diff < 1 else logging.INFO,
-        "get_history_data for {} targets took {} s",
-        len(targets),
-        time_diff,
-    )
 
     return rv
 
 
 async def get_analyze_data(app, request):
-    time_begin = timer()
     targets = []
     for target_dict in request["targets"]:
-        metrics = [target_dict["metric"]]
-        # guess if this is a pattern (regex) to expand by sending it to the manager
-        if "(" in target_dict["metric"] and ")" in target_dict["metric"]:
-            metrics = await app["history_client"].get_metrics(
-                metadata=False, historic=True, selector=target_dict["metric"]
-            )
-        targets.extend(metrics)
+        targets.extend(await unpack_metric(app, target_dict["metric"]))
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
     results = await asyncio.gather(
         *[get_analyze_response(app, metric, start_time, end_time) for metric in targets]
-    )
-    time_diff = timer() - time_begin
-    logger.log(
-        logging.DEBUG if time_diff < 1 else logging.INFO,
-        "get_analyze_data for {} targets took {} s",
-        len(targets),
-        time_diff,
     )
 
     return results
