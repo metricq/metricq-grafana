@@ -5,7 +5,6 @@ import traceback
 
 import click
 
-import aio_pika
 import aiohttp_cors
 import click_completion
 import click_log
@@ -27,10 +26,15 @@ logger.handlers[0].formatter = logging.Formatter(
 click_completion.init()
 
 
-async def start_background_tasks(app):
+async def start_background_tasks(app: web.Application):
     app["history_client"] = Client(
-        app["token"], app["management_url"], client_version=version, event_loop=app.loop
+        app["token"],
+        app["management_url"],
+        client_version=version,
+        event_loop=app.loop,
+        connection_timeout=None,
     )
+
     await app["history_client"].connect()
 
 
