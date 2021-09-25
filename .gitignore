@@ -1,2 +1,3 @@
 *.pyc
 metricq_grafana.egg-info/
+metricq_grafana/version.py
