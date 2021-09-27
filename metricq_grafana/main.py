@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import traceback
+from contextlib import suppress
 
 import click
 
@@ -33,9 +34,40 @@ async def start_background_tasks(app):
     )
     await app["history_client"].connect()
 
+    async def watchdog():
+        try:
+            await app["history_client"].stopped()
+        except Exception as e:
+            logger.error("history client encountered an error: {}", e)
+
+        # The "graceful" way to stop an aiohttp runner is
+        # about as graceful as an elephant seal, but it works.
+        # It's also a private API, but what can we do?
+        # https://github.com/aio-libs/aiohttp/issues/2950
+        # This is exactly what the signal handlers do.
+        # We could maybe be a little bit more graceful by
+        # running app.shutdown() and app.cleanup() before this,
+        # but then we get recursive mess again.
+        # And just runnign shutdown() and cleanup() won't do it either.
+        # See also:
+        # https://github.com/aio-libs/aiohttp/issues/3638#issuecomment-621256659
+        # Note that we suppress the Exception later so it doesn't end
+        # up as a dreaded "Task exception was never retrieved"
+        raise web.GracefulExit()
+
+    app["history_client_watchdog"] = app.loop.create_task(watchdog())
+
 
 async def cleanup_background_tasks(app):
-    pass
+    logger.debug("cleanup_background_tasks called")
+    with suppress(KeyError):
+        app["history_client_watchdog"].cancel()
+        # If it was the watchdog who caused the "GracefulExit"
+        # Then we can suppress it here, it has already done it's deed
+        with suppress(web.GracefulExit):
+            await app["history_client_watchdog"]
+    with suppress(KeyError):
+        await app["history_client"].stop()
 
 
 def create_app(loop, token, management_url, management_exchange, cors_origin):
