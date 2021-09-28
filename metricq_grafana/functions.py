@@ -17,7 +17,9 @@ def parse_functions(target_dict):
         elif function == "sma":
             try:
                 yield MovingAverageFunction(
-                    Timedelta.from_string(target_dict.get("sma_window"))
+                    Timedelta.from_string(
+                        target_dict.get("smaWindow", target_dict.get("sma_window"))
+                    )
                 )
             except (TypeError, KeyError):
                 pass

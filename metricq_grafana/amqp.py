@@ -26,7 +26,11 @@ async def get_history_data(app, request):
                     metric=metric,
                     name=target_dict.get("name", None),
                     functions=list(parse_functions(target_dict)),
-                    scaling_factor=float(target_dict.get("scaling_factor", "1")),
+                    scaling_factor=float(
+                        target_dict.get(
+                            "scalingFactor", target_dict.get("scaling_factor", "1")
+                        )
+                    ),
                 )
             )
 
