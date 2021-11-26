@@ -13,7 +13,7 @@ setup(
       """,
     install_requires=[
         "aio-pika",
-        "aiohttp",
+        "aiohttp ~= 3.8",
         "aiohttp-cors",
         "click",
         "click-completion",

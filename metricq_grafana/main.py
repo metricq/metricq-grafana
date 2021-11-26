@@ -140,4 +140,4 @@ def runserver_cmd(
             logger.error("Can't enable journal logger, systemd package not found!")
 
     app = create_app(loop, token, management_url, management_exchange, cors_origin)
-    web.run_app(app, host=host, port=port)
+    web.run_app(app, host=host, port=port, loop=loop)
