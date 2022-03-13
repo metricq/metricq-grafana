@@ -61,6 +61,8 @@ class AvgFunction(AggregateFunction):
         for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.mean
+            else:
+                yield timeaggregate.timestamp, None
 
 
 class MinFunction(AggregateFunction):
@@ -75,6 +77,8 @@ class MinFunction(AggregateFunction):
         for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.minimum
+            else:
+                yield timeaggregate.timestamp, None
 
 
 class MaxFunction(AggregateFunction):
@@ -89,6 +93,8 @@ class MaxFunction(AggregateFunction):
         for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.maximum
+            else:
+                yield timeaggregate.timestamp, None
 
 
 class CountFunction(AggregateFunction):
@@ -103,6 +109,8 @@ class CountFunction(AggregateFunction):
         for timeaggregate in response.aggregates():
             if timeaggregate.count != 0:
                 yield timeaggregate.timestamp, timeaggregate.count
+            else:
+                yield timeaggregate.timestamp, None
 
 
 class RawFunction(Function):

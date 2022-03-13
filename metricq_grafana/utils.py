@@ -3,7 +3,7 @@ import math
 
 def sanitize_number(value):
     """Convert NaN and Inf to None - because JSON is dumb"""
-    if math.isfinite(value):
+    if value is not None and math.isfinite(value):
         return value
     return None
 
