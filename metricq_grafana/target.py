@@ -117,7 +117,8 @@ class Target:
 
     def _transform_data(self, function, response):
         for timestamp, value in function.transform_data(response):
-            value = value * self.scaling_factor
+            if value is not None:
+                value = value * self.scaling_factor
             if self.order_time_value:
                 yield timestamp.posix_ms, sanitize_number(value)
             else:
