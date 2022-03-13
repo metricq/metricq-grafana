@@ -150,10 +150,10 @@ class MovingAverageFunction(Function):
             yield duration
 
     def transform_data(self, response):
-        if len(response) == 0:
-            return []
-
         response_aggregates = list(response.aggregates(convert=True))
+
+        if len(response_aggregates) == 0:
+            return []
 
         ma_integral_ns = 0
         ma_active_time = Timedelta(0)
