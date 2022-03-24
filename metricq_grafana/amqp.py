@@ -171,7 +171,15 @@ async def get_counter_data(app, metric, start, stop, width):
         target.get_response(app, start_time, end_time, interval),
         target.get_metadata(app),
     )
-    result = results[0] if len(results) > 0 else {"datapoints": []}
+    try:
+        result = results[0]
+    except IndexError:
+        return {
+            "data": [],
+            "description": "error: not found in database",
+            "unit": "",
+        }
+
 
     datapoints = [
         datapoint for datapoint in result["datapoints"] if start <= datapoint[0] <= stop
