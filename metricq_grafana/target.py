@@ -44,9 +44,12 @@ class Target:
         return result.get(self.metric, {})
 
     async def get_response(self, app, start_time, end_time, interval):
-        ((data, time_delta_ns), metadata) = await asyncio.gather(
-            self._get_data(app, start_time, end_time, interval), self._get_metadata(app)
-        )
+        try:
+            ((data, time_delta_ns), metadata) = await asyncio.gather(
+                self._get_data(app, start_time, end_time, interval), self._get_metadata(app)
+            )
+        except asyncio.TimeoutError:
+            return []
 
         if data is None or time_delta_ns is None:
             return []
@@ -77,7 +80,7 @@ class Target:
             start_time,
             end_time,
             interval,
-            timeout=30,
+            timeout=10,
             request_type=HistoryRequestType.FLEX_TIMELINE,
         )
         perf_end_ns = time.perf_counter_ns()
