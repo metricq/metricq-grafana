@@ -99,7 +99,7 @@ async def get_analyze_response(app, metric, start_time, end_time):
 async def get_metric_list(app, search_query, metadata=False, limit=None):
     time_begin = timer()
     get_metrics_args = {"metadata": metadata, "historic": True}
-    if search_query.startswith("/") and search_query.endswith("/"):
+    if search_query.startswith("/") and search_query.endswith("/") and len(search_query) > 1:
         get_metrics_args["selector"] = search_query[1:-1]
         if limit:
             get_metrics_args["limit"] = limit
