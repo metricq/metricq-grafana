@@ -30,7 +30,7 @@ click_completion.init()
 
 async def start_background_tasks(app):
     app["history_client"] = Client(
-        app["token"], app["management_url"], client_version=version, event_loop=app.loop
+        app["token"], app["management_url"], client_version=version
     )
     await app["history_client"].connect()
 

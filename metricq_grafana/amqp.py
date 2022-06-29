@@ -1,10 +1,12 @@
 import asyncio
+import dataclasses
 import functools
 import logging
 import operator
 import time
 
 from metricq import get_logger
+from metricq.history_client import HistoryResponseType, HistoryRequestType
 from metricq.types import Timestamp
 
 from .functions import parse_functions
@@ -199,3 +201,59 @@ async def get_counter_data(app, metric, start, stop, width):
         time_diff,
     )
     return rv
+
+async def get_history_data_hta(app, request):
+    targets = []
+    for target_dict in request["targets"]:
+        targets.extend(await unpack_metric(app, target_dict["metric"]))
+
+    start_time = Timestamp.from_iso8601(request["range"]["from"])
+    end_time = Timestamp.from_iso8601(request["range"]["to"])
+
+    interval = ((end_time - start_time) / request["maxDataPoints"]) * 2
+
+    results = await asyncio.gather(
+        *[get_hta_response(app, metric, start_time, end_time, interval) for metric in targets]
+    )
+
+    return results
+
+
+async def get_hta_response(app, metric, start_time, end_time, interval):
+    perf_begin_ns = time.perf_counter_ns()
+    response = await app["history_client"].history_data_request(
+        metric,
+        start_time,
+        end_time,
+        interval,
+        request_type=HistoryRequestType.FLEX_TIMELINE
+    )
+    perf_end_ns = time.perf_counter_ns()
+    data_array = []
+    mode = ""
+
+    if response is None:
+        return None
+
+    if response.mode is HistoryResponseType.EMPTY:
+        return None
+    elif response.mode is HistoryResponseType.AGGREGATES:
+        mode = "aggregates"
+        for resp in response.aggregates():
+            data_array.append({"min": resp.minimum, "avg": resp.mean, "max": resp.maximum, "time": resp.timestamp.posix_ms})
+    elif response.mode is HistoryResponseType.VALUES:
+        mode = "raw"
+        for resp in response.values():
+            data_array.append({"value": resp.value, "time": resp.timestamp.posix_ms})
+
+    return {
+        "metric": metric,
+        "mode": mode,
+        "time_measurements": {
+            "db": response.request_duration,
+            "http": (perf_end_ns - perf_begin_ns) / 1e9,
+        },
+        mode: data_array
+    }
+
+
