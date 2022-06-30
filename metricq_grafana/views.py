@@ -34,11 +34,15 @@ async def view_with_duration_measure(amqp_function, request):
                 (perf_end_process_ns - perf_begin_process_ns) / 1e9
             ),
         }
+        if "targets" in req_json:
+            metrics_length = len(req_json["targets"])
+        elif "metrics" in req_json:
+            metrics_length = len(req_json["metrics"])
         logger.log(
             logging.DEBUG if perf_diff < 1 else logging.INFO,
             "{} for {} targets took {} s",
             amqp_function.__name__,
-            len(req_json["targets"]),
+            metrics_length,
             perf_diff,
         )
     except TimeoutError:

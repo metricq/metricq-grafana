@@ -203,9 +203,9 @@ async def get_counter_data(app, metric, start, stop, width):
     return rv
 
 async def get_history_data_hta(app, request):
-    targets = []
-    for target_dict in request["targets"]:
-        targets.extend(await unpack_metric(app, target_dict["metric"]))
+    metrics = []
+    for metric_dict in request["metrics"]:
+        metrics.extend(await unpack_metric(app, metric_dict))
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
@@ -213,10 +213,10 @@ async def get_history_data_hta(app, request):
     interval = ((end_time - start_time) / request["maxDataPoints"]) * 2
 
     results = await asyncio.gather(
-        *[get_hta_response(app, metric, start_time, end_time, interval) for metric in targets]
+        *[get_hta_response(app, metric, start_time, end_time, interval) for metric in metrics]
     )
-
-    return results
+    assert len(metrics) == len(results)
+    return dict(zip(metrics, results))
 
 
 async def get_hta_response(app, metric, start_time, end_time, interval):
@@ -242,7 +242,7 @@ async def get_hta_response(app, metric, start_time, end_time, interval):
         for resp in response.aggregates():
             data_array.append({
                 "min": resp.minimum,
-                "avg": resp.mean,
+                "mean": resp.mean,
                 "max": resp.maximum,
                 "count": resp.count,
                 "time": resp.timestamp.posix_ms})
@@ -254,7 +254,6 @@ async def get_hta_response(app, metric, start_time, end_time, interval):
                 "time": resp.timestamp.posix_ms})
 
     return {
-        "metric": metric,
         "mode": mode,
         "time_measurements": {
             "db": response.request_duration,
