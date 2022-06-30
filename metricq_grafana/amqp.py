@@ -240,11 +240,18 @@ async def get_hta_response(app, metric, start_time, end_time, interval):
     elif response.mode is HistoryResponseType.AGGREGATES:
         mode = "aggregates"
         for resp in response.aggregates():
-            data_array.append({"min": resp.minimum, "avg": resp.mean, "max": resp.maximum, "time": resp.timestamp.posix_ms})
+            data_array.append({
+                "min": resp.minimum,
+                "avg": resp.mean,
+                "max": resp.maximum,
+                "count": resp.count,
+                "time": resp.timestamp.posix_ms})
     elif response.mode is HistoryResponseType.VALUES:
         mode = "raw"
         for resp in response.values():
-            data_array.append({"value": resp.value, "time": resp.timestamp.posix_ms})
+            data_array.append({
+                "value": resp.value,
+                "time": resp.timestamp.posix_ms})
 
     return {
         "metric": metric,
