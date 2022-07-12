@@ -1,9 +1,8 @@
 """Module for view functions"""
-from json import JSONDecodeError
 import logging
-
 import time
 from asyncio import TimeoutError
+from json import JSONDecodeError
 
 from aiohttp import web
 from metricq import get_logger
@@ -11,9 +10,8 @@ from metricq import get_logger
 from .amqp import (
     get_counter_data,
     get_counter_list,
-    get_history_data,
-    get_metric_list,
     get_metadata,
+    get_metric_list,
 )
 
 logger = get_logger(__name__)
@@ -24,9 +22,9 @@ async def view_with_duration_measure(amqp_function, request):
         req_json = await request.json()
     except JSONDecodeError:
         raise web.HTTPBadRequest()
-    
+
     logger.debug("{} request data: {}", amqp_function.__name__, req_json)
-    
+
     try:
         perf_begin_ns = time.perf_counter_ns()
         perf_begin_process_ns = time.process_time_ns()
@@ -40,10 +38,15 @@ async def view_with_duration_measure(amqp_function, request):
                 (perf_end_process_ns - perf_begin_process_ns) / 1e9
             ),
         }
-        if "targets" in req_json:
+
+        try:
             metrics_length = len(req_json["targets"])
-        elif "metrics" in req_json:
+        except KeyError:
+            # Catch the first KeyError and try again, but let the
+            # next KeyError raise, so it gets converted to BadRequest
+            # in the next try-except
             metrics_length = len(req_json["metrics"])
+
         logger.log(
             logging.DEBUG if perf_diff < 1 else logging.INFO,
             "{} for {} targets took {} s",

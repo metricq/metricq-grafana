@@ -1,12 +1,11 @@
 import asyncio
-import dataclasses
 import functools
 import logging
 import operator
 import time
 
 from metricq import get_logger
-from metricq.history_client import HistoryResponseType, HistoryRequestType
+from metricq.history_client import HistoryRequestType, HistoryResponseType
 from metricq.types import Timestamp
 
 from .functions import parse_functions
@@ -101,7 +100,11 @@ async def get_analyze_response(app, metric, start_time, end_time):
 async def get_metric_list(app, search_query, metadata=False, limit=None):
     time_begin = timer()
     get_metrics_args = {"metadata": metadata, "historic": True}
-    if search_query.startswith("/") and search_query.endswith("/") and len(search_query) > 1:
+    if (
+        search_query.startswith("/")
+        and search_query.endswith("/")
+        and len(search_query) > 1
+    ):
         get_metrics_args["selector"] = search_query[1:-1]
         if limit:
             get_metrics_args["limit"] = limit
@@ -166,8 +169,8 @@ async def get_counter_list(app, selector):
 async def get_counter_data(app, metric, start, stop, width):
     time_begin = timer()
     target = Target(metric, order_time_value=True)
-    start_time = Timestamp(start * 10 ** 6)
-    end_time = Timestamp(stop * 10 ** 6)
+    start_time = Timestamp(start * 10**6)
+    end_time = Timestamp(stop * 10**6)
     interval = (end_time - start_time) / width
     results, metadata = await asyncio.gather(
         target.get_response(app, start_time, end_time, interval),
@@ -181,7 +184,6 @@ async def get_counter_data(app, metric, start, stop, width):
             "description": "error: not found in database",
             "unit": "",
         }
-
 
     datapoints = [
         datapoint for datapoint in result["datapoints"] if start <= datapoint[0] <= stop
@@ -202,10 +204,11 @@ async def get_counter_data(app, metric, start, stop, width):
     )
     return rv
 
+
 async def handle_timeline_request(app, request):
     metrics = []
-    for metric_dict in request["metrics"]:
-        metrics.extend(await unpack_metric(app, metric_dict))
+    for metric in request["metrics"]:
+        metrics.extend(await unpack_metric(app, metric))
 
     start_time = Timestamp.from_iso8601(request["range"]["from"])
     end_time = Timestamp.from_iso8601(request["range"]["to"])
@@ -213,7 +216,10 @@ async def handle_timeline_request(app, request):
     interval = ((end_time - start_time) / request["maxDataPoints"]) * 2
 
     results = await asyncio.gather(
-        *[get_timeline(app, metric, start_time, end_time, interval) for metric in metrics]
+        *[
+            get_timeline(app, metric, start_time, end_time, interval)
+            for metric in metrics
+        ]
     )
     assert len(metrics) == len(results)
     return dict(zip(metrics, results))
@@ -226,7 +232,7 @@ async def get_timeline(app, metric, start_time, end_time, interval):
         start_time,
         end_time,
         interval,
-        request_type=HistoryRequestType.FLEX_TIMELINE
+        request_type=HistoryRequestType.FLEX_TIMELINE,
     )
     perf_end_ns = time.perf_counter_ns()
 
@@ -248,5 +254,5 @@ async def get_timeline(app, metric, start_time, end_time, interval):
             "db": response.request_duration,
             "http": (perf_end_ns - perf_begin_ns) / 1e9,
         },
-        mode: [entry.dict() for entry in getattr(response, mode)()]
+        mode: [entry.dict() for entry in getattr(response, mode)()],
     }
