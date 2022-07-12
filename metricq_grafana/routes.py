@@ -1,7 +1,7 @@
 """Module for route setup"""
 import functools
 
-from .amqp import get_analyze_data, get_history_data, get_history_data_hta
+from .amqp import get_analyze_data, get_history_data, handle_timeline_request
 from .views import (
     legacy_cntr_status,
     legacy_counter_data,
@@ -28,10 +28,10 @@ def setup_routes(app, cors):
         )
     )
 
-    resource = cors.add(app.router.add_resource("/query_hta"))
+    resource = cors.add(app.router.add_resource("/timeline"))
     cors.add(
         resource.add_route(
-            "POST", functools.partial(view_with_duration_measure, get_history_data_hta)
+            "POST", functools.partial(view_with_duration_measure, handle_timeline_request)
         )
     )
 

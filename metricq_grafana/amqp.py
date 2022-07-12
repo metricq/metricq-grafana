@@ -202,7 +202,7 @@ async def get_counter_data(app, metric, start, stop, width):
     )
     return rv
 
-async def get_history_data_hta(app, request):
+async def handle_timeline_request(app, request):
     metrics = []
     for metric_dict in request["metrics"]:
         metrics.extend(await unpack_metric(app, metric_dict))
@@ -213,13 +213,13 @@ async def get_history_data_hta(app, request):
     interval = ((end_time - start_time) / request["maxDataPoints"]) * 2
 
     results = await asyncio.gather(
-        *[get_hta_response(app, metric, start_time, end_time, interval) for metric in metrics]
+        *[get_timeline(app, metric, start_time, end_time, interval) for metric in metrics]
     )
     assert len(metrics) == len(results)
     return dict(zip(metrics, results))
 
 
-async def get_hta_response(app, metric, start_time, end_time, interval):
+async def get_timeline(app, metric, start_time, end_time, interval):
     perf_begin_ns = time.perf_counter_ns()
     response = await app["history_client"].history_data_request(
         metric,
@@ -229,8 +229,6 @@ async def get_hta_response(app, metric, start_time, end_time, interval):
         request_type=HistoryRequestType.FLEX_TIMELINE
     )
     perf_end_ns = time.perf_counter_ns()
-    data_array = []
-    mode = ""
 
     if response is None:
         return None
@@ -239,19 +237,10 @@ async def get_hta_response(app, metric, start_time, end_time, interval):
         return None
     elif response.mode is HistoryResponseType.AGGREGATES:
         mode = "aggregates"
-        for resp in response.aggregates():
-            data_array.append({
-                "min": resp.minimum,
-                "mean": resp.mean,
-                "max": resp.maximum,
-                "count": resp.count,
-                "time": resp.timestamp.posix_ms})
     elif response.mode is HistoryResponseType.VALUES:
-        mode = "raw"
-        for resp in response.values():
-            data_array.append({
-                "value": resp.value,
-                "time": resp.timestamp.posix_ms})
+        mode = "values"
+    else:
+        raise NotImplementedError("Received unexpected HistoryResponseType")
 
     return {
         "mode": mode,
@@ -259,7 +248,5 @@ async def get_hta_response(app, metric, start_time, end_time, interval):
             "db": response.request_duration,
             "http": (perf_end_ns - perf_begin_ns) / 1e9,
         },
-        mode: data_array
+        mode: [entry.dict() for entry in getattr(response, mode)()]
     }
-
-
