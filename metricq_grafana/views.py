@@ -1,4 +1,5 @@
 """Module for view functions"""
+from json import JSONDecodeError
 import logging
 
 import time
@@ -19,8 +20,13 @@ logger = get_logger(__name__)
 
 
 async def view_with_duration_measure(amqp_function, request):
-    req_json = await request.json()
+    try:
+        req_json = await request.json()
+    except JSONDecodeError:
+        raise web.HTTPBadRequest()
+    
     logger.debug("{} request data: {}", amqp_function.__name__, req_json)
+    
     try:
         perf_begin_ns = time.perf_counter_ns()
         perf_begin_process_ns = time.process_time_ns()
@@ -49,6 +55,8 @@ async def view_with_duration_measure(amqp_function, request):
         # No one responds means not found
         raise web.HTTPNotFound()
     except ValueError:
+        raise web.HTTPBadRequest()
+    except KeyError:
         raise web.HTTPBadRequest()
     return web.json_response(resp, headers=headers)
 
