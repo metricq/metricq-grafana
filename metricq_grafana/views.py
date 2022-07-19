@@ -1,8 +1,8 @@
 """Module for view functions"""
 import logging
-
 import time
 from asyncio import TimeoutError
+from json import JSONDecodeError
 
 from aiohttp import web
 from metricq import get_logger
@@ -10,17 +10,21 @@ from metricq import get_logger
 from .amqp import (
     get_counter_data,
     get_counter_list,
-    get_history_data,
-    get_metric_list,
     get_metadata,
+    get_metric_list,
 )
 
 logger = get_logger(__name__)
 
 
 async def view_with_duration_measure(amqp_function, request):
-    req_json = await request.json()
+    try:
+        req_json = await request.json()
+    except JSONDecodeError:
+        raise web.HTTPBadRequest()
+
     logger.debug("{} request data: {}", amqp_function.__name__, req_json)
+
     try:
         perf_begin_ns = time.perf_counter_ns()
         perf_begin_process_ns = time.process_time_ns()
@@ -34,17 +38,28 @@ async def view_with_duration_measure(amqp_function, request):
                 (perf_end_process_ns - perf_begin_process_ns) / 1e9
             ),
         }
+
+        try:
+            metrics_length = len(req_json["targets"])
+        except KeyError:
+            # Catch the first KeyError and try again, but let the
+            # next KeyError raise, so it gets converted to BadRequest
+            # in the next try-except
+            metrics_length = len(req_json["metrics"])
+
         logger.log(
             logging.DEBUG if perf_diff < 1 else logging.INFO,
             "{} for {} targets took {} s",
             amqp_function.__name__,
-            len(req_json["targets"]),
+            metrics_length,
             perf_diff,
         )
     except TimeoutError:
         # No one responds means not found
         raise web.HTTPNotFound()
     except ValueError:
+        raise web.HTTPBadRequest()
+    except KeyError:
         raise web.HTTPBadRequest()
     return web.json_response(resp, headers=headers)
 
