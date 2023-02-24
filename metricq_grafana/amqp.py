@@ -237,10 +237,16 @@ async def get_timeline(app, metric, start_time, end_time, interval):
     perf_end_ns = time.perf_counter_ns()
 
     if response is None:
-        return None
+        return {"error": "Missing response. Metric probably does not exist."}
 
     if response.mode is HistoryResponseType.EMPTY:
-        return None
+        return {
+            "mode": "empty",
+            "time_measurements": {
+                "db": response.request_duration,
+                "http": (perf_end_ns - perf_begin_ns) / 1e9,
+            },
+        }
     elif response.mode is HistoryResponseType.AGGREGATES:
         mode = "aggregates"
     elif response.mode is HistoryResponseType.VALUES:
