@@ -1,4 +1,4 @@
-FROM metricq/metricq-python:v4.2 AS BUILDER
+FROM ghcr.io/metricq/metricq-python:v4.2 AS BUILDER
 LABEL maintainer="mario.bielert@tu-dresden.de"
 
 USER root
@@ -13,7 +13,7 @@ COPY --chown=metricq:metricq . /home/metricq/grafana
 WORKDIR /home/metricq/grafana
 RUN pip install --user .
 
-FROM metricq/metricq-python:v4.2
+FROM ghcr.io/metricq/metricq-python:v4.2
 
 USER metricq
 COPY --from=BUILDER --chown=metricq:metricq /home/metricq/.local /home/metricq/.local
