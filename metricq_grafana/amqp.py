@@ -99,7 +99,7 @@ async def get_analyze_response(app, metric, start_time, end_time):
 
 async def get_metric_list(app, search_query, metadata=False, limit=None):
     time_begin = timer()
-    get_metrics_args = {"metadata": metadata, "historic": True, "hidden": True}
+    get_metrics_args = {"metadata": metadata, "historic": True, "hidden": False}
     if (
         search_query.startswith("/")
         and search_query.endswith("/")
@@ -151,7 +151,7 @@ async def get_metadata(app, metric):
 
 async def get_counter_list(app, selector):
     time_begin = timer()
-    metrics = await app["history_client"].get_metrics(selector=selector, historic=True, hidden=True)
+    metrics = await app["history_client"].get_metrics(selector=selector, historic=True, hidden=False)
     result = []
     for metric, metadata in metrics.items():
         result.append([metric, metadata.get("description", "")])
