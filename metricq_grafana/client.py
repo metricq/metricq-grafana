@@ -19,6 +19,6 @@ class Client(HistoryClient):
             metadata=metadata,
             historic=historic,
             timeout=timeout,
-            hidden=False,
+            hidden=False, # don't include hidden metrics
             **kwargs,
         )
