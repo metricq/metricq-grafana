@@ -19,5 +19,6 @@ class Client(HistoryClient):
             metadata=metadata,
             historic=historic,
             timeout=timeout,
+            hidden=False,
             **kwargs,
         )
