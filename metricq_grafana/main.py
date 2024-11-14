@@ -112,7 +112,7 @@ def panic(loop, context):
 @click.option("--debug/--no-debug", default=False)
 @click.option("--log-to-journal/--no-log-to-journal", default=False)
 @click.option("--host", default="0.0.0.0")
-@click.option("--port", default="4000")
+@click.option("--port", default=4000)
 @click.option("--cors-origin", default="*")
 @click_log.simple_verbosity_option(logger)
 @click.version_option(version=version)
@@ -140,4 +140,4 @@ def runserver_cmd(
             logger.error("Can't enable journal logger, systemd package not found!")
 
     app = create_app(loop, token, management_url, management_exchange, cors_origin)
-    web.run_app(app, host=host, port=port, loop=loop)
+    web.run_app(app, host=host, port=int(port), loop=loop)
