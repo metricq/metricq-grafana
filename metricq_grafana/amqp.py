@@ -151,7 +151,7 @@ async def get_metadata(app, metric):
 
 async def get_counter_list(app, selector):
     time_begin = timer()
-    metrics = await app["history_client"].get_metrics(selector=selector, historic=True, hidden=False)
+    metrics = await app["history_client"].get_metrics(selector=selector, historic=True)
     result = []
     for metric, metadata in metrics.items():
         result.append([metric, metadata.get("description", "")])
