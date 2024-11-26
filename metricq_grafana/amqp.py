@@ -4,9 +4,8 @@ import logging
 import operator
 import time
 
-from metricq import get_logger
+from metricq import get_logger, Timestamp
 from metricq.history_client import HistoryRequestType, HistoryResponseType
-from metricq.types import Timestamp
 
 from .functions import parse_functions
 from .target import Target
