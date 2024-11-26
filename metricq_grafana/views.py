@@ -1,4 +1,5 @@
 """Module for view functions"""
+
 import logging
 import time
 from asyncio import TimeoutError
@@ -7,12 +8,7 @@ from json import JSONDecodeError
 from aiohttp import web
 from metricq import get_logger
 
-from .amqp import (
-    get_counter_data,
-    get_counter_list,
-    get_metadata,
-    get_metric_list,
-)
+from .amqp import get_counter_data, get_counter_list, get_metadata, get_metric_list
 
 logger = get_logger(__name__)
 

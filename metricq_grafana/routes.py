@@ -5,8 +5,8 @@ from .amqp import get_analyze_data, get_history_data, handle_timeline_request
 from .views import (
     legacy_cntr_status,
     legacy_counter_data,
-    search,
     metadata,
+    search,
     test_connection,
     view_with_duration_measure,
 )
@@ -31,7 +31,8 @@ def setup_routes(app, cors):
     resource = cors.add(app.router.add_resource("/timeline"))
     cors.add(
         resource.add_route(
-            "POST", functools.partial(view_with_duration_measure, handle_timeline_request)
+            "POST",
+            functools.partial(view_with_duration_measure, handle_timeline_request),
         )
     )
 

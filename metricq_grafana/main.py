@@ -1,31 +1,20 @@
 """Main module for running http server"""
+
 import asyncio
-import logging
 import traceback
 from contextlib import suppress
 
-import click
-
-import aio_pika
 import aiohttp_cors
-import click_completion
-import click_log
+import click
 from aiohttp import web
 from metricq import get_logger
+from metricq.cli import metricq_command
 
 from .client import Client
 from .routes import setup_routes
 from .version import version
 
 logger = get_logger()
-
-click_log.basic_config(logger)
-logger.setLevel("INFO")
-logger.handlers[0].formatter = logging.Formatter(
-    fmt="%(asctime)s [%(levelname)-8s] [%(name)-20s] %(message)s"
-)
-
-click_completion.init()
 
 
 async def start_background_tasks(app):
@@ -105,19 +94,16 @@ def panic(loop, context):
     loop.stop()
 
 
-@click.command()
-@click.argument("management-url", default="amqp://localhost/")
-@click.option("--token", default="metricq-grafana")
+@metricq_command(default_token="metricq-grafana")
 @click.option("--management-exchange", default="metricq.management")
 @click.option("--debug/--no-debug", default=False)
 @click.option("--log-to-journal/--no-log-to-journal", default=False)
 @click.option("--host", default="0.0.0.0")
 @click.option("--port", default=4000)
 @click.option("--cors-origin", default="*")
-@click_log.simple_verbosity_option(logger)
 @click.version_option(version=version)
 def runserver_cmd(
-    management_url,
+    server,
     token,
     management_exchange,
     debug,
@@ -126,6 +112,7 @@ def runserver_cmd(
     port,
     cors_origin,
 ):
+
     loop = asyncio.get_event_loop()
     if debug:
         logger.warn("Using loop debug - this is slow")
@@ -139,5 +126,9 @@ def runserver_cmd(
         except ImportError:
             logger.error("Can't enable journal logger, systemd package not found!")
 
-    app = create_app(loop, token, management_url, management_exchange, cors_origin)
+    app = create_app(loop, token, server, management_exchange, cors_origin)
     web.run_app(app, host=host, port=int(port), loop=loop)
+
+
+if __name__ == "__main__":
+    runserver_cmd()
