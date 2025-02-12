@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
+from metricq import Timedelta
 from metricq.history_client import HistoryResponse, HistoryResponseType
-from metricq.types import Timedelta
 
 
 def parse_functions(target_dict):

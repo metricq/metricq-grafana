@@ -1,0 +1,239 @@
+openapi: 3.0.0
+info:
+  title: MetricQ Grafana API
+  description: API for interacting with the MetricQ Grafana data source for Grafana.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000
+    description: Local development server
+  - url: http://localhost:4001
+    description: Secondary Testing server
+
+paths:
+  /query:
+    post:
+      summary: Fetch historical data for specified metrics
+      description: This endpoint retrieves historical data for the specified metrics within a given time range.
+      operationId: getHistoryData
+      requestBody:
+        description: Metrics data request payload
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      metric:
+                        type: string
+                      name:
+                        type: string
+                      scaling_factor:
+                        type: number
+                range:
+                  type: object
+                  properties:
+                    from:
+                      type: string
+                      format: date-time
+                    to:
+                      type: string
+                      format: date-time
+                maxDataPoints:
+                  type: integer
+      responses:
+        '200':
+          description: Historical data response
+
+  /analyze:
+    post:
+      summary: Analyze metrics data
+      description: Performs an aggregate analysis of the specified metrics within the provided time range.
+      operationId: getAnalyzeData
+      requestBody:
+        description: Analyze request payload
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      metric:
+                        type: string
+                range:
+                  type: object
+                  properties:
+                    from:
+                      type: string
+                      format: date-time
+                    to:
+                      type: string
+                      format: date-time
+      responses:
+        '200':
+          description: Analyzed data response
+
+  /timeline:
+    post:
+      summary: Get timeline data for specified metrics
+      description: Fetch timeline data for the given metrics within a specified time range.
+      operationId: getTimelineData
+      requestBody:
+        description: Timeline request payload
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metrics:
+                  type: array
+                  items:
+                    type: string
+                range:
+                  type: object
+                  properties:
+                    from:
+                      type: string
+                      format: date-time
+                    to:
+                      type: string
+                      format: date-time
+                maxDataPoints:
+                  type: number
+      responses:
+        '200':
+          description: Timeline data response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                    datapoints:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: number
+
+  /search:
+    post:
+      summary: Search for metrics
+      description: Search available metrics based on a search query.
+      operationId: searchMetrics
+      requestBody:
+        description: Search request payload
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target:
+                  type: string
+                limit:
+                  type: number
+                metadata:
+                  type: boolean
+      responses:
+        '200':
+          description: List of matching metrics
+
+  /metadata:
+    post:
+      summary: Fetch metadata for a metric
+      description: Retrieve metadata for a specified metric.
+      operationId: getMetadata
+      requestBody:
+        description: Metadata request payload
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target:
+                  type: string
+      responses:
+        '200':
+          description: Metric metadata response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+
+  /legacy/cntr_status.php:
+    post:
+      summary: Legacy counter status
+      description: Fetch legacy counter status for a given selector.
+      operationId: legacyCntrStatus
+      requestBody:
+        description: Legacy counter request payload
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                selector:
+                  type: string
+      responses:
+        '200':
+          description: Legacy counter status response
+
+  /legacy/counter_data.php:
+    get:
+      summary: Fetch legacy counter data
+      description: Retrieve counter data for a specific counter.
+      operationId: getLegacyCounterData
+      parameters:
+        - name: cntr
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: stop
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: width
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Counter data response
+
+
+  /:
+    get:
+      summary: Test connection
+      description: Test the server connection.
+      operationId: testConnection
+      responses:
+        '200':
+          description: Connection successful
+        '500':
+          description: Connection failed

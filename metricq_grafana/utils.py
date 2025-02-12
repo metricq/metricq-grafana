@@ -14,5 +14,5 @@ async def unpack_metric(app, metric):
         metrics = await app["history_client"].get_metrics(
             metadata=False, historic=True, selector=metric
         )
-        return metrics
+        return metrics.keys()
     return [metric]

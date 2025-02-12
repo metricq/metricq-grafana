@@ -19,7 +19,7 @@ setup(
         "click-completion",
         "click_log",
         "colorama",
-        "metricq ~= 4.1.0",
+        "metricq[cli] ~= 5.4.0",
         "aiocache",
     ],
     extras_require={"journallogger": ["systemd"]},

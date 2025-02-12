@@ -1,7 +1,9 @@
 from typing import Optional, Sequence, Union
 
 from aiocache import SimpleMemoryCache, cached
-from metricq import HistoryClient
+from metricq import HistoryClient, JsonDict, get_logger
+
+logger = get_logger(__name__)
 
 
 class Client(HistoryClient):
@@ -13,7 +15,7 @@ class Client(HistoryClient):
         historic: Optional[bool] = None,
         timeout: Optional[float] = None,
         **kwargs,
-    ) -> Union[Sequence[str], Sequence[dict]]:
+    ) -> dict[str, JsonDict]:
         return await super().get_metrics(
             selector=selector,
             metadata=metadata,

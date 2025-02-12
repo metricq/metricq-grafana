@@ -4,9 +4,8 @@ import logging
 import operator
 import time
 
-from metricq import get_logger
+from metricq import Timestamp, get_logger
 from metricq.history_client import HistoryRequestType, HistoryResponseType
-from metricq.types import Timestamp
 
 from .functions import parse_functions
 from .target import Target
@@ -116,13 +115,10 @@ async def get_metric_list(app, search_query, metadata=False, limit=None):
             get_metrics_args["limit"] = 100
 
     result = await app["history_client"].get_metrics(**get_metrics_args)
-    if result:
-        if isinstance(result, list):
-            rv = sorted(result)
-        else:
-            rv = result
+    if not metadata:
+        rv = result.keys()
     else:
-        rv = []
+        rv = result
     time_diff = timer() - time_begin
     logger.log(
         logging.DEBUG if time_diff < 1 else logging.INFO,

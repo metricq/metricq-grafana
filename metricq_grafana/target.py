@@ -46,7 +46,8 @@ class Target:
     async def get_response(self, app, start_time, end_time, interval):
         try:
             ((data, time_delta_ns), metadata) = await asyncio.gather(
-                self._get_data(app, start_time, end_time, interval), self._get_metadata(app)
+                self._get_data(app, start_time, end_time, interval),
+                self._get_metadata(app),
             )
         except asyncio.TimeoutError:
             return []
