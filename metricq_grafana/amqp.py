@@ -29,7 +29,8 @@ async def get_history_data(app, request):
                     functions=list(parse_functions(target_dict)),
                     scaling_factor=float(
                         target_dict.get(
-                            "scalingFactor", target_dict.get("scaling_factor", "1")
+                            "scalingFactor", target_dict.get(
+                                "scaling_factor", "1")
                         )
                     ),
                 )
@@ -99,7 +100,7 @@ async def get_analyze_response(app, metric, start_time, end_time):
 
 async def get_metric_list(app, search_query, metadata=False, limit=None):
     time_begin = timer()
-    get_metrics_args = {"metadata": metadata, "historic": True, "hidden": False}
+    get_metrics_args = {"metadata": metadata, "historic": True}
     if (
         search_query.startswith("/")
         and search_query.endswith("/")
